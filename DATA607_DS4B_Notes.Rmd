@@ -1,0 +1,87 @@
+---
+title: "Data Science for Business Notes"
+author: "Bonnie Cooper"
+date: "2/2/2020"
+output:
+  html_document:
+    theme: readable
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<br><br>
+
+## Notes from readings in 'Data Science for Business' for DATA607
+
+<br>
+
+### Chapter 1  
+### Introduction: Data-Analytic Thinking  
+  
+  
+[*Dream no small dreams for they have no power to move the hearts of men.* ]{style="float:right"}  
+\n
+[-Johann Wolfgang von Goethe ]{style="float:right"} 
+\n
+<br><br>  
+
+#### The Ubiquity of Data Opportunities
+Exploiting data for ccompetitive advantage
+Widest application of data-mining techniques: targeted marketing, online advertising, recommendations for cross-selling.
+View business problems from a data persepctive and understand principles of extracting useful knowledge from data.
+Intuition + Creativity + Common Sense + Domain Knowledge
+Data Science: a set of fundamental principles that guide the extraction of knowledge from data.
+Data mining: extraction of knowledge from data via technologies that incorporate data science techiques & principles.  
+<br>
+Example: Hurricane Frances. Data driven predictions based on shopper purchase histories from previous storms. looking for unusual local demands for products with inclement weather to optimize stocking products at store locations...the pre-hurricane top-selling item was beer & sales of strawberry pop-tarts went up 7 fold. Of course, What goes better with strawberry pop-tarts than a nice cold beer!  
+<br>
+Example: Predicting Customer Churn
+Churn: customers switching from one company to another.
+use data reseources to decide which customers should be offered special incentives to stay on after contracts expire.  
+<br>  
+
+#### Data Science, Engineering and Data-Driven Decision Making
+Data Science involves the principles, processes and techniques for understanding phenomena via automated analysis of data.
+Data-Driven Decision (DDD) making: practice of basing decisions on the analysis of data, rather than purely on intuition.
+Statistically, the more data driven a firm is, the more productive it is (Brynjolfsson et al 2011)
+DDD Type 1: decisions for which 'discoveries' need to be made
+Example: Target was interested in whether they could predict whether people were expecting a baby. built a predictive model of how purchase history changes with pregnancy.
+DDD Type 2: decisions that repeat, especially at a massive scale
+Example: churn
+Predictive modelling: focus on particular indicators that correlate in some way with a quantity of interest (who will churn, who will purchase, etc.)
+The data analysis was not simply testing a hypothesis, it was searching for something useful...some actionable information to help the company.  
+<br>
+
+#### Data Processing and 'Big Data'
+Data engineering and processing are critical to support data science, but they are more general; they support data science applications.
+Big Data: data sets that are too large and/or too complex for traditional data processing systems. big data technologies are used for dat processing in support of the data mining techniques and other data science activities.
+Use of big data technologies is associates with significant additional productivity growth (Tambe 2012)  
+<br>
+
+#### Data and Data Science Capability as a Strategic Asset
+A fundamental principle of data science: data,and the capability to extract useful knowledge from data, should be regarded as key strategic assets.
+The best data science team can yield little value without the appropriate data; the right data often cannot substantially improve decisions without suitable data science talent.
+EXample: Signet Banking using predictive modeling to model profitability by aquiring the necessary data at a loss. they conducted an experiment by giving different customers different credit terms to generate profitability data  
+<br>
+
+#### Data-Analytic Thinking
+Asses whether and how data can improve performance
+
+<style>
+div.blue { background-color:#e68cf6; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">  
+
+#### TAKE THE DATA ... EXTRACT PATTERS ... THAT ARE USEFUL  
+
+</div>  
+
+Fundamental concepts:
+
+1. Extracting useful knowledge from the data to solve business problems can be treated sytematially by following a process with reasonably well-defined stages.
+2. From a large mass of dat, information technology can be used to find information descriptive attributes of entities of interest.
+3. If you look too hard at a set of data, you will find something. However, it might not generalize beyond the data you are looking at. (overfitting)
+4. Formulating data mining sloutions and evaluating the results involves thinking carefully about the context in which tey will be used.
+
