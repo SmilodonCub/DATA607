@@ -1,0 +1,140 @@
+---
+title: "Loading Data into a Data Frame"
+author: "Bonnie Cooper"
+date: "2/2/2020"
+output:
+  html_document:
+    theme: readable
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br><br>  
+
+### Introduction: What do men think it means to be a man?
+
+FiveThirtyEight asked > 1600 men whether they felt the #MeToo movement had changed their perception of masculinity. The study was an effort to gain insights into how #MeToo affects how men feel about being men. Important questions about male identity were raised: For example, participants were asked whether society puts unhealthy pressure on men. Additionally, the study investigated male perceptions of gender in the work place. This is among many other interesting insights. More information about the study can be found in this [FiveThirtyEight article](https://fivethirtyeight.com/features/what-do-men-think-it-means-to-be-a-man/)
+
+<br>
+
+### Masculinity Survey data 
+
+This demo will explore the dataset, 'masculinity-survey', associated with this study. We wll start by accessing the data and loading it as an r dataframe as follow:
+
+1. We will create the environment we need to run this .Rmd by loading the necessary R packages
+2. Access the data from FiveThirtyEight & use the dim() function to get a sense of the size of our dataframe
+3. Get the current names of the columns
+
+```{r, message=F}
+#load the necessary R packages
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r, message=F, warning=F}
+#Access the data from FiveThirtyEight & use the dim() function to get a sense of the size of our dataframe
+#the url to the raw data from FiveThirtyEight's git
+url <- "https://raw.githubusercontent.com/fivethirtyeight/data/master/masculinity-survey/raw-responses.csv"
+#use read_csv() function to read the csv file in to an R dataframe
+masculinity_DF <- read_csv( url )
+#use the dim() function to get a sense of the size of the df
+dim( masculinity_DF )
+```
+<br>
+
+##### Regarding the dimensions of our dataframe.
+This dataframe has 1615 rows corresponding to 1615 participants in the survey conducted by FiveThirtyEight.
+The data record of each participant holds 98 columns. Therefore, there are 98 features to analyze in this dataset. 
+<br>
+
+Let's view the columns names
+
+```{r}
+#Get the current names of the columns
+names( masculinity_DF )
+```
+<br> 
+
+### Subsetting the Masculinity Survey data  
+We can see the column names in the output above. Aside from a few columns with names that suggest demographic information and other record identifications, most of the column names are ambiguously labelled after the corresponding questions in the survey the participants answered.
+
+To understand what the data represents, we will have to take a look at the actual [FiveThirtyEight Masculinity Survey](https://github.com/fivethirtyeight/data/blob/master/masculinity-survey/masculinity-survey.pdf)  
+<br>
+
+The questions are broad and cover a variety of topics from perspectives on dating to opinions about professional working environments. However, for the sake of this exercise, we will create a subset of the dataframe that focuses on just a few of the questions about masculinity & #MeToo. The selection was based on personal interest; I think these particular questions would be interesting to look at as a function of age range. These questions are from subjectively broader in scope with relatively simple categorical answers (e.g. yes or no). If you find another survey question more thought provoking, please use this code to pursue your own analysis!
+<br> 
+
+##### Columns of interest:  
+
+* age3 What is you age? ("18 - 34", "35 - 64", or "65 and up")
+* q0001 In general, how masculine or 'manly' do you feel?  
+* q0002 How important is it to you that others see you as masculine?  
+* q0005 Do you think that society puts pressure on men in a way that is unhealthy or bad for them?  
+* q0014 How much have you heard about the #MeToo movement?  
+* q0015 As a man, would you say you think about your behavior at work differently in the wake of #MeToo?  
+
+This next block of code will create a new dataframe that holds a subset of the masculinity_DF corresponding to the columns of interest. We will also rename the columns with more intuitive labels.
+```{r}
+#create a dataframe that is a subset of the masculinity_DF and holds the columns we are interested in for our analysis and assign the columns new names
+subsetMasc_DF <- masculinity_DF %>% select(Age = age3, How_Manly = q0001, Important = q0002, Unhealthy = q0005, MeToo_Aware = q0014, MeToo_Wake = q0015 )
+#display the first several rows of the new dataframe 'subsetMasc_DF'
+head( subsetMasc_DF )
+```
+<br>
+
+### Analyzing & visualizing the subset of data
+We have just selected a subset of data from a much larger dataset. This subset selects for some specific features (columns) of the data that we are interested in analizing.
+In the next block of code, we will look at how men from different age groups percieve how 'manly' they feel.
+
+```{r}
+#aggregate the data subset by the 'Age' and 'How_Manly' columns. calculate the frequency or each
+freq_AgeManly <- subsetMasc_DF %>%
+	group_by( Age, How_Manly ) %>%
+    summarize( Freq = n() )
+#now we need to find the frequency of the Age groups
+freq_Age <- subsetMasc_DF %>%
+	group_by( Age ) %>%
+    summarize( Freq = n() )
+#we would like to find the relative proportion of the frequencies of percieved manliness per age group, so we will populate a new column with the frequency values for the corresponding age group
+index <- freq_Age[["Age"]]
+values <- freq_Age[["Freq"]]
+freq_AgeManly$AgeFreq <- values[match(freq_AgeManly$Age, index)]
+#take a peak at the first few rows to see if things worked...
+head( freq_AgeManly )
+#Great, now to make a new column in our aggregation that represents the percent of perceived manliness for each age group. This will normalize the data so that we can make a more meaningful comparison between the age groups.
+freq_AgeManly$Percent <- round( ( freq_AgeManly$Freq/freq_AgeManly$AgeFreq )*100 )
+head( freq_AgeManly )
+#Now we will prepare the data to be plotted as a bar graph.
+#This will implement an example graph that can be found at:
+#https://www.r-graph-gallery.com/48-grouped-barplot-with-ggplot2.html
+
+# create a dataset to plot
+data2plot <- data.frame(HM = freq_AgeManly$How_Manly, A = freq_AgeManly$Age, P = freq_AgeManly$Percent)
+#head( data2plot )
+# Grouped
+ggplot( data2plot, aes(fill=A, y=P, x=HM)) + 
+    geom_bar(position="dodge", stat="identity") +
+    xlab("Perceived Manliness") + ylab("%") +
+    ggtitle("Perceived Manliness by Age Group") +
+    labs(fill = "Age Group")
+
+
+```
+<br>
+
+### Findings & Recommendations
+The figure above plots the percentage of men from each age group that self-reported a perceived measure of how 'Manly' they feel. For all age groups, the majority of men reported feeling "Somewhat Masculine" or "Very Masculine". Comparatvely fewer men self-reported as feeling "Not very" or "Not at all" masculine. The envelope for the data of age groups "35 - 64" and "65 and up" were very similar. However, Age group "18 - 34" deviated from the other age groups. For example, "18 - 34" group had comparatively higher percentages of males that identified "Not at all" or "Not very" masculine. The trend reverses for "Somewhat" and "Very" masculine reportings.
+
+We just examined how percieved feelings of manliness vary across the age groups.
+There are several other questions we can ask of our data subset:
+
+1. Does age affect the importance men place on others see them as masculine?
+2. Does age impact the likelihood that a man percieves an unhealthy societal pressure because of their gender?
+3. Are different age groups more or less aware of the #MeToo movement that their peers?
+These are just a few examples. This dataset is very high dimensional and information rich, so there are many, many directions that the analysis can be taken. What other questions would you chose to analyze?  
+<br><br><br>
