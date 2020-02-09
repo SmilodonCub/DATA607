@@ -84,4 +84,74 @@ Fundamental concepts:
 2. From a large mass of dat, information technology can be used to find information descriptive attributes of entities of interest.
 3. If you look too hard at a set of data, you will find something. However, it might not generalize beyond the data you are looking at. (overfitting)
 4. Formulating data mining sloutions and evaluating the results involves thinking carefully about the context in which tey will be used.
+<br><br>
+
+***
+<br><br>
+
+### Chapter 2
+### Business Problems and Data Science Solutions
+
+Decomposing a data-analytics problem into pieces such that each piece matches a known task for which tools are available
+
+Big basic types of data mining algorithms you just gotta know:
+
+1. Classification & class probability estimation: for each indivisual in a population, which of a small set of classes does the individual belong to. relevant: scoring, or probability estimation: probability that the individual belongs to a certain class. Whether something will happen.
+2. Regression (value estimation) attempts to estimate for each individual the numeric value of some variable for that individual. How much something will hapen.
+3. Similarity matching. identify similar individuals based on data known about them. (think recommender systems)
+4. Clustering. group individuals in a population together by thier similarity.
+5. Co-occurence grouping. attempts to find associations between entities based on transactions involving them. (market basket analysis)
+6. Profiling. characterize the typical behavior of an individual, group, or population. used to establish behavioral norms for anomaly detection.
+7. Link prediction. predict connections betwen data & possibly the strengths as well (e.g. social network connections)
+8. Data Reduction. Take a lare set of data and replace it with a smaller set of data that contains much of the important information of the larger set. Data reduction often involves a loss of information, but what is important is the trade-off for improved insight.
+9. Causal modeling. Evens/actions that actually influence other events/actions.
+<br><br>
+
+#### Supervised vs Unsupervised Methods.
+
+* supervised: target information / feedback is given about a problem/grouping. A supervised technique is given a specific purpose of a grouping -- pridicting a target.
+For supervised learning, there must be data on the target. The value for the target variable for an individual is often called the individual's 'label', often one must incur expense to actively label the data. main classes: classification & regression.
+* unsupervised: no feedback is given and the algorithm is left to group/categorize on arbitrary criteria. Unsupervised learning produces grouping based on similarity, but there is no guarentee that these similarities will be useful. main classes: similarity matching, link prediction & data reduction
+
+A vitl part in the early stages of the data mining process is (i) to decide whether the line of attack is supervised or unsupervised, to produce a precise definition of a target variable that will be the focus of data mining.
+<br><br>
+
+#### Data Mining and Its Results
+different things:
+
+1. mining the data to find patterns and build models.
+2. using the results of data mining
+<br><br>
+
+#### The Data Mining Process
+Iteration is the rule rather than the exception
+
+The CRISP data mining process
+
+* Business Understanding. Understand the problem to be solved. Multiple iterations may be necessary for a acceptable solution to appear. Creativity plays a large role here. What exactly do we want to do? How exactly do we want to do it?
+* Data Understanding. understand the strengths and limitations of the data
+* Data Preparation. Analytic technologies often require data to be in a different form from how the data are provided natuarally, and some cenversion will be necessary. Defining variables is one of the main points at which human creativity, common sense, and business knowledge come in to play. Often the quality of the data mining solution rests on how well the analysts structure the problems and craft the variables
+* Modeling. Pattern captering regularities in the data.
+* Evaluation. Asses the data mining results rigorously and to gain confidence that they are valid and reliable before moving on.
+* Put the model in to real use. "Your model is not the one that data scientists design, it's what the engineers build."
+Regardless of whether the deployment is successful, the process often retruns to the Business Understanding phase.
+Data mining is an exploratory undertaking closer to research and development than it is to engineering iterating on approaches and strategy.
+<br><br>
+
+#### Other Analytics Techniques and Technologies.
+
+1. Statistics
+2. Database Querying
+3. Data Warehousing
+4. Regression Analysis
+5. Machine Learning and Data Mining
+<br><br>
+
+#### Answering Business Questions.
+Who are the most profitable customers?
+Is there really a difference between profitable customers and the average customer?
+But who really are these customers? Can I characterize them?
+Will some particular new costomer be profitable? How much revenue should I expect this customer to generate?
+
+
 

@@ -1,0 +1,42 @@
+---
+title: "DATA607_Assignment2"
+author: "Bonnie Cooper"
+date: "2/7/2020"
+output:
+  html_document:
+    theme: readable
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=F}
+library( odbc )
+library( RMySQL )
+```
+
+#### Establishing a connection to a MySQL database
+
+```{r}
+# establish connection
+con <- dbConnect(MySQL(), user='root', password='FunLasts4Ever!', dbname='movie_ratings', host='127.0.0.1')
+```
+
+#### List Tables
+```{r}
+dbListTables( con )
+```
+
+#### Create table in R from the MySQL table
+
+```{r}
+myQuery <- 'SELECT * FROM FB_friend_ratings;'
+ratings_df <- dbGetQuery( con, myQuery )
+ratings_df
+```
+
+
+#### References 'R connection with MySQL' https://www.youtube.com/watch?v=zRFiG_IEIhY
