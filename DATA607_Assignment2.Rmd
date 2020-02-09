@@ -1,42 +1,179 @@
 ---
-title: "DATA607_Assignment2"
+title: 'DATA607 Assignment2: SQL & R'
 author: "Bonnie Cooper"
 date: "2/7/2020"
 output:
   html_document:
-    theme: readable
     highlight: tango
+    theme: readable
 ---
+
+```{r, echo=FALSE}
+# Define variable containing url
+url <- "https://imgur.com/4U613JE.png"
+```
+<br><br>  
+
+## What did my friends think of several films I saw recently?
+
+![all images from imbd.com](`r url`)
+ 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+<br>
 
+#### Introduction & Data Collection  
 
+This assignment demonstrates the process of loading information from a SQL database into an R dataframe. I chose six movies and asked friends on facebook to rate the movies on a scale of 1 to 5 (where 1=Strongly Dislikes, ..., 3=Indifference, ..., & 5=Strongly Liked the movies). The movies were recent & relatively popular movies that I had seen in the theater. It was difficult for me to chose movies, because I have rather eccentric taste and wanted to suggest titles that at least several of my friends had hopefully seen. There was one exception, however, I had not seen BlacKkKlansman. I just got too busy and never made it to the theater. Perhaps from surveying my friends on thier thoughts of the movie, I can make an estimate of how I would rate BlacKkKlansman?.....
+
+The movies I chose were:
+
+1. Black Panther (2018)
+2. Parasite (2019)
+3. Us (2019)
+4. BlacKkKlansman (2018)
+5. Get Out (2017)
+6. Star Wars: The Last Jedi (2017)
+
+34 responses were received, however, of these, only 22 where considered for further analysis because ratings were given for at least half (>=3) of the movies.
+
+With MySQL Workbench, the data was stored in a SQL database, 'movie_ratings', as a table, 'FB_friend_ratings'.  
+The SQL script to load the data can be found here: [DATA607: load_FB_friend_ratings.sql](https://github.com/SmilodonCub/DATA607/blob/master/load_FB_friend_ratings.sql)
+
+Here we will look at two methods to load the data into RStudio:
+
+1. Access the SQL data directly from R
+2. Access the data through an intermediary .csv file
+<br><br>  
+
+#### 1. Accessing the SQL data directly from R
+
+First we load the necessary R libraries.
 ```{r, message=F}
 library( odbc )
 library( RMySQL )
 ```
 
-#### Establishing a connection to a MySQL database
+Next, we establish a connection to a MySQL database.
+The block of R code below shows the syntax for the connection. However, the actual line that is executed (and that contains my password) is hidden.
 
-```{r}
+```{r echo = F, eval = T}
 # establish connection
 con <- dbConnect(MySQL(), user='root', password='FunLasts4Ever!', dbname='movie_ratings', host='127.0.0.1')
 ```
+```{r echo = T, eval = F}
+con <- dbConnect(MySQL(), user='root', password='TypeYourPasswordHere', dbname='movie_ratings', host='127.0.0.1')
+```
+```{r}
+con
+```
 
-#### List Tables
+Great!, we have established a connection and can now list the tables in the database 'movie_ratings' 
 ```{r}
 dbListTables( con )
 ```
 
-#### Create table in R from the MySQL table
+Now to create an R dataframe from the SQL table. We will do this by using a SELECT statement to select all the data in the table. If we were accessing a very large database, this would be an eccellent point to filter the data using a SELECT statement with more constraints.
 
 ```{r}
+#write our SELECT statement as a string
 myQuery <- 'SELECT * FROM FB_friend_ratings;'
+#apply out SELECT statement to the database we established a connection to.
 ratings_df <- dbGetQuery( con, myQuery )
-ratings_df
+#display the head of the resulting R dataframe
+head( ratings_df )
+```
+
+```{r}
+#return the names of the columns in 'ratings_df'
+names( ratings_df )
 ```
 
 
-#### References 'R connection with MySQL' https://www.youtube.com/watch?v=zRFiG_IEIhY
+```{r}
+#return the dimensions of 'ratings_df'
+dim( ratings_df )
+```
+<br>
+
+We can see from the output of the above blocks, that the resulting dataframe has the expected features (columns) and dimensions.
+<br><br>  
+
+#### 2. Access the data through an intermediary .csv file
+
+MySQL Workbench provides some very user friendly features to export a data table to a .csv file. Through directions to do so are given in [this MySQLTutorial](https://www.mysqltutorial.org/mysql-export-table-to-csv/)
+The following code walks through the process of accessing the same data from the 'FB_friend_ratings' table that has been previously exported as a .csv file and [uploaded to githut](https://github.com/SmilodonCub/DATA607/blob/master/FB_friend_ratings.csv)
+
+```{r}
+#library(RCurl)
+#create a string that holds the URL for the raw csv file
+ratings_URL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/FB_friend_ratings.csv'
+gitRatings <- read.csv( url( ratings_URL ) )
+head( gitRatings )
+```
+
+```{r}
+#return the names of the columns in 'gitRatings'
+names( gitRatings )
+```
+
+
+```{r}
+#return the dimensions of 'gitRatings'
+dim( gitRatings )
+```
+
+We just generated two R dataframes using different methods; let's test to see if they are equivalent. We will do this using the comparedf() function from the arsenal library
+
+```{r}
+require( arsenal )
+summary( comparedf( gitRatings, ratings_df ) )
+```
+
+The output above definitively shows that the two methods we used to load the SQL data to dataframes in RStudio yielded identical data structures.
+<db><db>  
+
+#### Handling missing data
+To avoid confusion, the rest of this demo will make use of 'rating_df'
+Use the head() function to preview the dataframe again
+
+```{r}
+head( ratings_df )
+```
+
+From the output above, we can see that there are a lot of missing data entries given by 'NA'. This indicates that a person gave no rating for the movie because they have not seen it. There are many ways to deal with missing data points. An excellent overview is given in this ['Dealing with Missing Data using R'](https://medium.com/coinmonks/dealing-with-missing-data-using-r-3ae428da2d17) article.
+
+A simple way to deal with the missing data is imputation with the mean. Basically, any 'NA' in a given column is replaced by the column's mean. We will execute this in the following code:
+
+
+```{r}
+#ratings_df[,2:7]
+ratingsMeans <- sapply(ratings_df[,2:7], function( cl) 
+    list(means=mean(cl,na.rm=TRUE)))
+ratingsMeans
+```
+```{r, warning=FALSE, message=FALSE}
+#write a function to replace any 'NA' element with the mean for a column
+NA2mean <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+#make a copy to modify
+ratings_NA2Mean <- ratings_df
+#use lapply to apply the 'NA2mean' function to each column
+ratings_NA2Mean[] <- lapply(ratings_NA2Mean, NA2mean)
+#preview to dataframe
+head( ratings_NA2Mean )
+```
+<db>  
+
+If we compare the output for head( ratings_df ) with the output for head( ratings_NA2Mean ), we observe that the 'NA' values in ratings_df have been replaced with the column appropriate values that are held in the variable ratingsMeans.
+
+This resulting dataframe, 'ratings_NA2Mean', gives simple ratings estimates for each missing value. For instance, I had not seen the movie 'BlacKkKlansman'. The mean rating from my friends is 4.27, so perhaps I should get around to watching it.
+
+Imputation of missing data values with an estimate such as the mean is a simple and straight-forward way to deal with 'NA' values. There are certainly many much more sophisticated modeling and prediction techniques that can be used deal with missing values (e.g. K Nearest Neighbor ). However, they are typically best when deployed on much larger datasets & are out of the scope for this assignment.
+
+#### References 
+
+1. [R connection with MySQL](https://www.youtube.com/watch?v=zRFiG_IEIhY)
+2. [MySQL Export Table to CSV](https://www.mysqltutorial.org/mysql-export-table-to-csv/)
+3. ['Dealing with Missing Data using R'](https://medium.com/coinmonks/dealing-with-missing-data-using-r-3ae428da2d17)
