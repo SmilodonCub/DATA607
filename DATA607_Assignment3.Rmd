@@ -1,0 +1,181 @@
+---
+title: "DATA607 Assignment #3:\n R Character Manipulation"
+author: "Bonnie Cooper"
+date: "2/16/2020"
+output:
+  html_document:
+    highlight: tango
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<br><br>  
+
+## 1. College Majors Dataset
+<font size="4">
+Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+
+
+```{r , message=F}
+#load the FiveThirtyEight data from 'majors-list.csv' to a data.frame
+library( tidyverse )
+dataURL <- 'https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv'
+dataDF <- read_csv( dataURL )
+head( dataDF )
+```
+```{r}
+#identify majors that contain the word 'DATA'
+DATA_idx <- grepl( 'DATA', dataDF$Major )
+dataDF$Major[ DATA_idx ]
+```
+```{r}
+#identify majors that contain the word 'STATISTICS'
+DATA_idx <- grepl( 'STATISTICS', dataDF$Major )
+dataDF$Major[ DATA_idx ]
+```
+```{r}
+#I'm just curious. See a lot of majors with 'SCIENCE' or 'SCIENCES'. 
+#Would like to identify & count them as well:
+DATA_idx <- grepl( 'SCIENCE | SCIENCES', dataDF$Major )
+dataDF$Major[ DATA_idx ]
+length( dataDF$Major[ DATA_idx ] )
+```
+<br><br>
+
+----------------------------------------------------------------------------
+
+
+
+## 2. Parse words to list
+
+<font size="4">
+Write code that transforms the data below:
+
+[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+
+[13] "olive"        "salal berry"
+
+Into a format like this:
+
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+```{r}
+#make character vector that hold desired output to use as a test case:
+testStrings <- c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+#I was really confused by the wording of this question 
+#& am still not sure what we are supposed to work with as input. 
+#This was my best guess:
+data <- 
+'[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+
+[13] "olive"        "salal berry"'
+data
+```
+<br>  
+We want to parse the words from the string above and pass them to a character vector using regular expressions
+```{r}
+#use strsplit() to split by '\"'
+result <- strsplit(data, '\\"')
+# '[a-z].*[a-z]' -> find any lower case alphabet, 
+#there can be any number of characters in between, 
+#it has the end with a lower case alphabet number.
+dataStrings = grep(pattern = '[a-z].*[a-z]', result[[1]], value = TRUE, ignore.case = TRUE)
+dataStrings
+#test to see if our result matches our known test character vector
+dataStrings == testStrings
+```
+<br><br>
+
+----------------------------------------------------------------------------
+  
+
+
+## 3. Describe, in words, what these expressions will match:
+<font size="4">
+
+
+* ### (.)\1\1  ->    
+'(.)' Find a character '\1' that repeats and '\1' then repeats again ->  
+find 3 repreating characters (e.g. 'aaa')  
+<br> 
+
+* ### (.)(.)\\2\\1 ->     
+'(.)'=Find a character '(.)'= Find the next character '\\2'= then the have the second character '\\1'= then the contents of the 1st character ->
+Find a four member palindrome (e.g. 'eppe' in 'bell pepper')
+```{r}
+grep(pattern = '(.)(.)\\2\\1', dataStrings, value = TRUE, ignore.case = TRUE)
+```
+
+* ### (..)\1 ->  
+(..) = Find two consecutive characters as a group. '\1' = let the group repeat again ->
+Find repeating pairs of characters
+```{r}
+grep(pattern = '(..)\\1', dataStrings, value = TRUE, ignore.case = TRUE)
+```
+
+
+
+* ### (.).\\1.\\1 ->
+'(.)' = A character, '.\'= 1 character of something else, '\1'= that 1st character again, '.\'= 1 character of something else, '\1'= that first character yet again. 
+
+```{r}
+dataStrings <- c( dataStrings, 'banana')
+grep(pattern = '(.).\\1.\\1', dataStrings, value = TRUE, ignore.case = TRUE)
+```
+
+* ### (.)(.)(.).*\\3\\2\\1 ->
+This takes the second expression ((.)(.)\\2\\1) one step further:
+'(.)(.)(.)' = find three characters '.*' = there can be anything & any number of characters inbetween '\\3\\2\\1' = then reverse the order of the 1st three characters. (e.g 123badpassword321)
+
+<br><br>
+
+----------------------------------------------------------------------------
+<br><br>  
+
+
+## 4. Construct regular expressions to match words that:
+<font size="4">
+
+* Start and end with the same character.
+* Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+* Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+
+
+For this exercise I will use the feature 'country.name.de' from the dataframe 'codelist' from the 'countrycode' library to test my expressions
+```{r, message=F}
+library( countrycode )
+```
+```{r}
+countryNames = tolower( codelist$country.name.de ) 
+#i changed to lower to make the first expression a simpler case
+head( countryNames )
+```
+
+* ### Start and end with the same character.
+```{r}
+grep(pattern = '^([A-Za-z]).*\\1$', countryNames, value = TRUE, ignore.case = TRUE)
+```
+
+* ### Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+```{r}
+grep(pattern = '([A-Za-z][A-Za-z]).*\\1', countryNames, value = TRUE, ignore.case = TRUE)
+```
+
+* ### Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+
+```{r}
+grep(pattern = '([A-Za-z]).*\\1.*\\1', countryNames, value = TRUE, ignore.case = TRUE)
+```
+
+
