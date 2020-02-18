@@ -154,4 +154,139 @@ But who really are these customers? Can I characterize them?
 Will some particular new costomer be profitable? How much revenue should I expect this customer to generate?
 
 
+### Chapter 3
+### Introduction to predictive modeling: From Correlation to Supervised Segmentation
 
+#### Fundamental concepts: Identifying informative attributes; segmenting data by progressive attribute selection
+
+Data Mining: finding or selecting important informative variables or attributes of the entities described by the data. Information is a quantity that reduces the undertainty about something.
+
+#### Models Induction & Prediction
+Model: simplified representation of reality that abstracts away irrelevant information
+Prediction: to estimate un unknown value
+Descriptive Model: gain an insight into the underlying phenomenon or process
+Supervised learning is model creation where the model describes a relationship between a set of variables and a predefined taget variable (labeled data).
+dataset/table/worksheet
+examples/instances/rows
+independant variables/predictors/explanatory variable
+target variable/dependant variable
+Model Induction: creation of models from data
+
+#### Supervised Segmentation
+Segmentation done using values of variables that will be known when the target is not, then these segments can be used to predict the value of the target variable. segmentation may provide a human-understandable set of segmentation patterns
+
+#### Selecting Informative Attributes: want the subset to be as homogeneous as possible with respect to the target variable. However, 
+attributes rarely split a group perfectly.
+not all attributes are binary
+purity measure: how well each attribute slits a set of examples into segments
+Entropy: measure of disorder Entropy = p1log(p1)-p2log(p2)-....
+Information Gain: how much an attribute improves (decreases) entropy over the whole segmentation it creates. If we were to now the value of this attribute, how much would it increase our knowledge of the value of the target variable?
+IG(parent,children)=entropy(parent)-[p(c1)entropy(c1)+...+p(cn)entropy(c2)] where the entropy of each child is weighted by the proportion of instances belonging to that child. Information gain does not require absolute purity, it can be applied to any number of child subsets, and it takes into account the relative sizes of the children giving more weight to larger subsets.
+A natural measure  of impurity for numeric values is variance.
+Which single attribute is the most useful for distinguishing a categorical designation == which attribute yields the most information gain across this designation
+
+
+#### Supervised Segmentation with Tree-Structured Models
+attribute selection: if we pick a single variable that gives the most information gain, we create a very simple seggregation
+The procedure of classification tree induction is a recursive process of divide and conquer, where the goal at each step is to select an attribute to partition the current group into subgroups that are as pure as possible with respect to the target variable
+Decision lines/surfaces/boundaries & hyperplanes
+Trees as sets of rules. each rule consists of the attribute tests along the path connection with AND.
+Probability estimation: use the instance counts at each leaf to compute a class probability estimate (frequency-based estimate), or laplace correction which moderates the influence of leaves with only a few instances
+
+
+
+### Chapter 4
+### Fitting a Model to Data
+
+Parameter learning / Parametric modeling: start with aspecific model with attributes. the goal is to tune the paramters so that the model fits the data as well as possible.
+
+Linear Discriminant Fxns. linear discriminant discriminates between classes, and the function od the decision boundary  is a linear combination of attributes.
+General Linear Model: f( x ) <- w_0 + w_1x_1 + w_2x_2 + ...
+
+Optimizing an Objective Fnx. define an objectve function that represents our goal and can be calculated for a particular set of weights & data.
+
+Linear regression, logistic regression and SVM are all very similar instances of fitting a linear model to data.
+
+Support Vector Machines: linear classifiers with the objective of maximizing the margin between data classes.penalize misclassified data points. the best fit is some balance between a fat margin an a low total error penalty.
+
+Regression via Mathematical Functions. linear regression as an instance of fitting a (linear) model to the data, choose the objective function to optimize and do so with the business application in mind
+
+Loss Functions (Error Penalty) A loss fxn determines how much penalty should be assigned to an instance based on the error in the model's predicted value
+
+Linear regression: how big is the error of the fitted model?: how far away are the estimated values from the true values on the training data? find the minimum sum of errors, generally, find the sum/mean of the squares of the errors (least squares regression). this strongly penalizes very large errors. however, this leaves it very sensitive to the data. an outlier can skew the fit.
+
+Class Probability Estimation and logistic regression.
+Estimate the probability that a new instance belongs to the class of interest. Logistic regression is often thought of simply as a model for the probability of class membership.
+
+* probability estimates should be well calibrated.
+* probability estimates need to be discriminative
+
+* for probability estimation, logistic regression uses the same linear model as do our linear discriminants for classification and linear regression for estimating numeric target values.
+* The output of the logistic regression model is interpreted as the log-odds of class membership.
+* log-odds can be translated directly into the probability of class memebership.
+
+Logistic regression is estimating the log-odds or, more losely, the probability of class membership (a numeric quantity) over a categorical class. We consider it to be a class probability estimation model and NOT a regression model despite its name.
+
+Logistic Regression vs Tree Induction
+1. Classification trees use decision boundares that are perpendicular to the instance space axes, whereas linear classifiers use decision boundaries of any direction/orientation. This is a direct consequence of the fact that classification trees select a single attribute at a time whereas linear classifiers use a wighted combination of all attributes.
+2. A classification tree is a piecewise classifier that segments the instnace space recursively when it has to using a divide and conquer approach. In principle, a decision tree can cut up the instance space arbitrarily finely into very small regions. A linear classifier places a single decision surface through the entire space. It has great freedom in the orientation of the surface, but it is limited to a single division into two segments. this is a direct consequence of there being a single linear equation that uses all of the variables and must fit the entire dta space.
+
+The two most common families of techniques that are based on fitting the parameters of complex nonlinear functions are nonlinear svm & neural networks.
+One can think of a neural network as a stack of models. the bottom stack are the original features. from these are learned a variety of relatively simple models (e.g. logistic regressions ) each subsequent layer in the stack applies a simple model (e.g. another logistic regression) to the next layer to build upon.
+
+
+
+
+### Chapter 5
+### Overfitting and its Avoidance
+
+[*If you torture the data long enough, it will confess.* ]{style="float:right"}  
+\n
+[-Nobel Laureate Ronald Coase
+<br><br>
+
+Patterns that generalize: predict well for instances that we have not yet observed.
+Generalization: property of a model or modeling rocess whereby the model applies to data that were not used to build the model.
+Overfitting: finding chance occurances in the data that look like interesting patterns, but do not generalize. ...the model is tailored to the training data at the expense of generalization to previously unseen data points.
+There is a fundamental tradeoff between model complexity and the possibility of overfitting.
+Generally, there will be mre overfitting as one allows the modelto be more complex.
+
+#### Overfitting Examined
+Base Rate Classifier: classifier that always selects the majority class
+A procedure that grows trees until the leaves are pure tends to overfit. Need to find a trade off between the extremes of not splitting the data at all and simply using the average target value in the entire dataset, and building a complete tree out until the leaves are pure. Unfortunately, no one has come up with a procedure to determine this exact sweet spot yet...have to rely on empirically based techniques.
+As you increase the dimensionality, you can perfectly fit larger and larger sets of arbitrary points.
+
+```{r}
+library(ggplot2)
+data(iris)
+summary(iris)
+
+ggplot(iris, aes(x=Sepal.Width, y=Petal.Width, color=Species)) + 
+    geom_point(size=6)
+```
+
+```{r}
+#SVM
+#linear regression
+```
+
+Why does performance degrade with overfitting? ...the short answer: when a model gets more complex, it picks up harmful spurious correlations ... these correlations are idiosyncracies of the specific training set used and do not represent characteristics of the populaion in general. the harm occurs when these spurious correlations produce incorrect generalizations in the model
+
+* all model types are susceptible to overfitting effects.
+* samples have natural variations, so any subset can lead to overfitting
+* there is no general analytic way to determine if a model is overfitting 
+
+#### Cross-Validation
+unlike splitting the data into one training set and one hold-out set, cross-validation computes its estimate over all the data by perfroming multiple splits and systematically swapping out samples for testing. Cross-validation begins by splitting a labeled dataset into 'k' folds. Cross-validation then iterates training and testing 'k' times. So, in each iteration, we have (k-1)/k of the data used for training and 1/k used for testing. Each iteration produces one mode. When cross-validation is finishe, every example will have been used only once for testing, but k-1 times for training. At this point we have performance estimates from all k folds and we can compute the average and standard deviation.
+
+#### Learning Curve
+a plot of the generalization performance against the amount of training data A learning curve shows the generalization performance -the performance only testing on the data, plotted against the amount of training data.
+Fitting graph: a fitting graph shows the generalization performance as well as the performance on the training data, but plotted against model complexity
+
+#### Overfitting avoidance and complexity control
+
+1. Avoiding overfitting with tree induction. tree inductions is very flexible, so it needs a mechanism of control to avoit overfitting. You can either (i) stop growing the tree before it gets too complex or (ii) grow the tree too complex and then 'prune' it back.How few instances to have on a leaf (set number or hypothesis test in information gain)? 
+2. General Methods for Avoiding Overfitting. Nested holdout testing: have a subtraining set to model/test how to fit the validation set before applying to the final test set. It is nested because a second holdout procedure is performed on the training set selected by the first holdout procedure.
+
+Avoiding overfitting for parameter optemization
+regularization: instead of just optimizing the fit to the data, we optimize some combination of fit and simplicity.

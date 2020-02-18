@@ -1,5 +1,5 @@
 ---
-title: "DATA607 Assignment #3:\n R Character Manipulation"
+title: "DATA607 Assignment #3: R Character Manipulation"
 author: "Bonnie Cooper"
 date: "2/16/2020"
 output:
