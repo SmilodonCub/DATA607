@@ -1,0 +1,281 @@
+---
+title: 'Wrangling Text Data from a Chess Tournament'
+author: "Bonnie Cooper"
+#date: "2/7/2020"
+output:
+  html_document:
+    highlight: tango
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+![](https://i.imgur.com/V4dntAi.png)
+<br>  
+<font size="3"> 
+
+## Data Wrangling  
+
+It is often necessary to transform raw data to a condensed and more useful format to facilitate downstream analysis. This process is often refered to as 'Data Wrangling'  
+  
+In this demo, we will wrangle data from a chess tournament. The raw data is given to us as a .txt file and our goal is to transform the text data into a much more concise tabular form and to export the data as a .csv (comma separated value) file. However, we are not simply transcribing to text data. Rather, we are extracting specific elements and performing some simple manipulations to represent a subset of the information given in the text file.  
+
+We need to extract the following information from the raw data:
+
+1. Player’s Name
+2. Player’s State
+3. Total Number of Points
+4. Player’s Pre-Rating
+5. Average Pre Chess Rating of Opponents
+  
+![](https://i.imgur.com/BD3qDSy.png)
+<font size="3">
+From the image above, we see that there are many irrelevant characters. However, we also observe that the raw data has some predictable structure that we can take advantage of to parse the information that we need to format our deliverable.
+
+To achieve this goal, we will perform the following steps:
+
+1. Import the Raw Data
+2. Initialize a data.frame to serve as an intermediary
+3. Parse the text for the data we need
+4. Write our data.frame to a .csv file
+5. Form some preliminary insights
+<br><br>  
+
+## 1. Import the Raw Data
+For the convenience of this demo, the .txt raw data has been uploaded to the [author's github](https://github.com/SmilodonCub/DATA607/blob/master/tournamentinfo.txt) account. We can access the data as follows:  
+
+```{r}
+#URL for the chess tournament text data
+tournament_text_URL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/tournamentinfo.txt'
+#pass 'tournament_text_URL' to the readLines() function. 
+#Each line of the text file will be read into r.
+tournament_text <- readLines(tournament_text_URL,warn=FALSE)
+#format the text as an r data.frame
+tournament_text_stringsdf <- data.frame(tournament_text,stringsAsFactors = FALSE)
+#use the head() function to display the first several lines in the data.frame
+head( tournament_text_stringsdf, 12 )
+```
+<br><br>  
+
+## 2. Initialize a data.frame to serve as an intermediary
+
+<font size="3">
+Now we will initialize a data.frame to hold the results of our data wrangling. The features that we want to extract have been defined for us, so we can set up the corresponding number of collumns and give them descriptive names. If we open up and inspect the [text file](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/tournamentinfo.txt), we can scroll down and see that there are 64 records. Therefore, we will preallocate 64 rows.  
+<br>  
+
+Is it necessary to preallocate space for our data?  
+No, not necessarily, at least not in R. However, since we know the size and shape of the data we are expecting, specifiying so in the size and shape of the data.frame can help catch some data processing errors early on.
+
+
+```{r}
+#initialize a dataframe & name the columns
+chessfeatures <- c("Name","State","Total_Num_Points",
+              "Pre_Rating","Ave_Pre_Rating_Opponents")
+#initialize a dataframe & give the columns the names from 'chessfeatures'
+tournament_df <- setNames(data.frame(matrix(ncol = length( chessfeatures ), nrow = 64)), chessfeatures) #64 rows for the 64 chess records
+```
+<br><br>  
+
+## 3. Parse the text  
+<font size="3">
+If we look at the data.frame 'tournament_text_stringsdf' we can see that most of the data we are interested in parsing out is relatively easy to locate within the reoccuring pattern of the text.  
+
+Four of the five data features we are interested in are indicated in the figure below:
+
+1. <span style="color: red;">**Player’s Name (red circle)**</span> 
+2. <span style="color: blue;">**Player’s State (blue circle)**</span>
+3. <span style="color: orange;">**Total Number of Points (orange circle)**</span>
+4. <span style="color: purple;">**Player’s Pre-Rating (purple circle)**</span>
+
+![](https://i.imgur.com/HHrSm6z.png)
+<br>  
+<font size="3">
+Now, to extract the data. These are the basic steps we will take:
+
+* set up idices for the rows of text that hold data
+* use strsplit() to split the rows by the delimeting character '|'
+* select out the specific split of interst
+* reformat the split & add the data to the proallocated data.frame
+
+```{r}
+#the data for the features 'Player's Name' & Total Number of Points'
+#first appears in row 5 and then re-occures every 3 lines.
+#set up and list of indices for these rows:
+namesRow_IDX <- seq( 5, 194, 3)
+#the data for the features 'Player's State' & Player's Pre-Rating'
+#first appears in row 6 and then re-occures every 3 lines.
+#set up and list of indices for these rows:
+IDnumRow_IDX <- seq( 6, 195, 3)
+
+#use strsplit() to split the rows of interest into string fragments 
+#delimited by the character '|'. Use the lists 'NamesRow_IDX' & 
+#'IDnumRow_IDX' to select subsets of rows to help select for data features
+splitNamesRow <- strsplit(tournament_text_stringsdf[namesRow_IDX,], "\\|")
+splitIDnumRow <- strsplit(tournament_text_stringsdf[IDnumRow_IDX,], "\\|")
+
+#use the function unlist() with lappy() to access a specific string
+#from the list of split substrings.
+#for the 'Player's Name feature, we need to select the 2nd element 
+#from splitNamesRow and use the trimws() to eliminate leading and trailing
+#blank spaces.
+tournament_df$Name <- trimws(unlist(lapply(splitNamesRow, '[[', 2))) 
+#for the 'Player's State' feature, we need to select the 1st element 
+#from splitIDnumRow and use the trimws() to eliminate leading and trailing
+#blank spaces.
+tournament_df$State <- trimws(unlist(lapply(splitIDnumRow, '[[', 1)))
+#for the 'Total Number of Points' feature, we need to select the 3rd element 
+#from splitNamesRow and use the as.numeric() to cast from character to
+#numeric data
+tournament_df$Total_Num_Points <- 
+    as.numeric(trimws(unlist(lapply(splitNamesRow, '[[', 3))))
+#The 'Player’s Pre-Rating' feature is a bit more complicated. 
+#we need to select the 2nd element from splitIDnumRow with lappy() & unlist().
+#Next, we use a regular expression pattern to select the Player's
+#pre-tournament rating. We then use the gsub() function to select
+#the information and as.numeric() to re-cast the data.
+tournament_df$Pre_Rating <- unlist(lapply(splitIDnumRow,'[[', 2))
+#this pattern will select a variable length of numeric characters that are
+#preceded by 'R:' and followed by any other type of character 
+#(in the case of our data this is either '-' or 'P').
+pat <- "^.*R:.*?([0-9]+).*"
+tournament_df$Pre_Rating <- as.numeric(
+    gsub(pat, "\\1", tournament_df$Pre_Rating))
+#display the head of the tournament_df dataframe to visually inspect our result.
+head( tournament_df )
+```
+<br><br>  
+
+Great!, we are almost done wrangling our text data into the form we want.  
+But there is one more feature left, 'Average Pre Chess Rating of Opponents'.  
+This feature is a bit more of a challenge to extract, so we will be taking the following steps:
+
+* select the 4th through 10th string elements from 'splitNamesRow'
+* select the numeric digits from each element
+* With a for loop, use these numbers as indices to:
+  + keep track of rounds without ppponent numbers
+  + select an opponent's numeric ID
+* Find the average pre-tournament rating of a player's opponents
+
+```{r}
+#select the 4th through 10th string elements from 'splitNamesRow'
+tournament_df$Ave_Pre_Rating_Opponents <- lapply(splitNamesRow,'[', 4:10)
+
+#use a combination of gsub() and str_extract_all() (from the stringr library)
+#to select the numeric character for each round.
+library(stringr)
+tournament_df$Ave_Pre_Rating_Opponents <- str_extract_all(
+    gsub( '\\"[A-Za-z]', '\\1', tournament_df$Ave_Pre_Rating_Opponents),
+    "\\(?[0-9]+\\)?" )
+
+#The numbers we extracted give the numeric ID of a Player's opponent
+#for every round where a player faced an opponent (win, lose, or draw)
+#in this for loop, we use the numeric ID as an index to select the opponent's
+#pre-tournament ranking. We will keep track of the pre-tournament ranking
+#and keep track of the number of rounds where there was no opponent.
+num_records <- length(tournament_df$Ave_Pre_Rating_Opponents)
+scores <- rep(0, num_records)
+numRounds <- rep(0, num_records)
+for (round in seq(1:7) ){
+    scoresIDX <- as.numeric(
+      lapply(tournament_df$Ave_Pre_Rating_Opponents, '[', round))
+    scores2ADD <- tournament_df$Pre_Rating[scoresIDX]
+    NAadd <- as.numeric(is.na(scores2ADD ))
+    numRounds <- numRounds + NAadd
+    scores2ADD[is.na(scores2ADD)] <- 0
+    scores <- scores + scores2ADD
+}
+
+#Find the average pre-tournament rating of a player's opponents
+#subtract the number of Rounds where there was no opponent (e.g. byes)
+totalRoundsPlayed <- rep(7, num_records)-numRounds
+#divide the sum of the opponent scores by the number of opponents
+tournament_df$Ave_Pre_Rating_Opponents <- round(scores/totalRoundsPlayed)
+
+head( tournament_df )
+```
+<br><br>  
+
+## 4. Write our data.frame to a .csv file
+
+Our hard work paid off: we wrangled our data into a concise tabular form as an r data.frame. Now we need to write the data.frame to a .csv file format. Ths csv format is convenient, because it can be loaded into various platforms for further data management and/or manipulation.
+
+```{r}
+#this step is a simple oneliner with the function write.csv():
+write.csv( tournament_df, file ='tournamentDATA.csv', row.names = FALSE)
+```
+<br><br>  
+
+## 5. Form some preliminary insights 
+
+Now that we have extracted the data of interest from the original text file, we can perform some preliminary analysis.
+
+We can start by using the summary() function to look at some simple descriptive statistics of the features (columns) that we derived from the raw text:
+
+```{r}
+summary( tournament_df )
+```
+<br><br>  
+
+We can explore the data further with a few simple visualizations  
+
+Let's plot the average pre-tournament rating of a player's opponents as a function of the player's pre tournament rating:
+```{r}
+library( ggplot2 )
+library(ggpmisc)
+my.formula <- y ~ x
+p <- ggplot(tournament_df, aes(x=Pre_Rating, y=Ave_Pre_Rating_Opponents)) +
+  geom_point(size=2, shape=23) +
+  geom_smooth(method=lm, se=T) +
+  ggtitle('Mean Opponent Rating as a function of\nPre-tournament Rating') +
+  xlab('Player’s Pre-Tournament Rating') +
+  ylab("Opponent's Average Pre-Tournament Rating") +
+  stat_poly_eq(formula = my.formula, 
+              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+              parse = TRUE)
+p
+
+```
+
+From the figure above, we see that there is a suggestion of a positive trend in the data given by the regression line (blue line). However, the variability of the data points is very high about the regression line and the R^2^ value is very low.
+
+What if we look for regional differences in the data? Do different states have players with higher average pre-tournament rankings?
+
+```{r}
+# Set color by cond
+ggplot(tournament_df, aes(x=Pre_Rating, y=Ave_Pre_Rating_Opponents, 
+                          color=State)) + 
+  geom_point(alpha=0.5, size=4) +
+  ggtitle('Mean Opponent Rating as a function of Pre-tournament Rating\nGrouped by State') +
+  xlab('Player’s Pre-Tournament Rating') +
+  ylab("Opponent's Average Pre-Tournament Rating")
+```
+
+
+```{r message=FALSE}
+library(dplyr)
+agg_byState <- tournament_df %>% group_by(State) %>% 
+  summarise( numPlayers = n(), Mean = mean(Pre_Rating), Median = median(Pre_Rating), IQRange = IQR(Pre_Rating))
+agg_byState
+```
+
+```{r}
+# Basic box plot
+p <- ggplot(tournament_df, aes(x=reorder(State, Pre_Rating, FUN=median), y=Pre_Rating, fill=State)) + 
+  geom_boxplot() +
+  ggtitle('Pre-tournament Rating Grouped by State') +
+  ylab('Mean Pre-Tournament Rating') +
+  xlab("Player's State")
+p
+```
+
+As we can see from both the results of the aggregation and the boxplot visualization, there are very few data points from the states 'OH' and 'ON' (presumably Ohio and Ontario). Therefore, we cannot draw any solid conclusions about differences between the groups. However, we observe that players that traveled from a state other than Michigan have a higher median pre-tournament rating.
+<br><br>  
+
+## Conclusions
+In this demo we wrangled data from a text file, restructured the data features into a concise format and wrote the output to a .csv file. The reformated data is more tractable that the raw text version because it omits superfluous characters. Additionally, the .csv output can be imported to many different platforms for further downstream analysis. Therefore, although we were not able to draw many meaningful insights from this as a standalone dataset, the data can be combined with other information in future analyses and/or this code can be repurposed for a similar but much larger raw data set.
+
+
+![](https://s3.ap-south-1.amazonaws.com/media.chessbase.in/image/Homer_Simpson_and_kids_jpg_DDVWA_1168x655.jpeg)
+
+Images from The Simpsons 'The Cad and the Hat' Season 28,Episode 14. 
