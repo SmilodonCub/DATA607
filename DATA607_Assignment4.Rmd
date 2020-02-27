@@ -1,0 +1,34 @@
+---
+title: "Assignment 4"
+author: "Bonnie Cooper"
+date: "2/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library( magrittr )
+library( tidyr )
+library( dplyr )
+library( ggplot2 )
+```
+
+```{r}
+flightsURL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/flightssample_data607.csv'
+flights_df <- read.csv( flightsURL ,stringsAsFactors = FALSE)
+flights_df
+```
+
+```{r}
+colnames( flights_df ) <- c('Carrier', 'Status', 'LAX', 'PHX', 'SAN', ' SFO', 'SEA')
+flights_df <- flights_df %>% filter_all(all_vars(!is.na(.))) 
+%>% mutate_if(is.character, list(~na_if(.,""))) 
+%>% fill(Carrier)
+flights_df
+```
+
+
+https://blog.rstudio.com/2014/07/22/introducing-tidyr/
