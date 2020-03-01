@@ -148,6 +148,15 @@ Let's start by plotting:
   
 
 <div class = "col-md-12">
+```{r}
+#calculate the overal delay rate for the two airline carriers
+flights_summary <- colSums(t(flights_df[,c('LAX','PHX','SAN','SFO','SEA')]))
+delayedALASKA <- round(flights_summary[2]/(flights_summary[1]+flights_summary [2])*100,1)
+delayedAM_WEST <- round(flights_summary[4]/(flights_summary[3]+flights_summary [4])*100,1)
+cat( 'Delayed flights ALASKA =', delayedALASKA,'%\nDelayed flights AM WEST = ',delayedAM_WEST,'%')
+```
+
+ALASKA appears to have more delayed flights than AM WEST, however....
 
 ```{r}
 #make a boxplot of the % delayed flights for each carrier
@@ -161,7 +170,9 @@ p
 ```
 <br>
 
-&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a box plot showing the distribution of the % delayed flights of each airline carrier for the destinations we have data on. There is a trend for AM West flights to have a higher chance of being delayed. However, the difference between the two distributions was not found to be significant (p=0.22,Wilkoxon t-test).
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a box plot showing the distribution of the % delayed flights of each airline carrier for the destinations we have data on. There is a trend for AM West flights to have a higher percentage of delayed flights. However, the difference between the two distributions was not found to be significant (p=0.22,Wilkoxon t-test).
+
+&nbsp;&nbsp;&nbsp;&nbsp;This figure is interesting because the distributions shows AM West to have higher delay rates per city than ALASKA whereas the overall delay rate suggests the opposite (ALASKA 13.3% > AM WEST 10.9%). Let's visualize the data as a barplot:
 
 ```{r}
 #make a bar plot of the %delayed flights for each airline for each destination
@@ -173,11 +184,13 @@ ggplot( results_df, aes(fill=Carrier, y=pD, x=Destination)) +
 ```
 
 &nbsp;&nbsp;&nbsp;&nbsp;The figure above plots the percentage of delayed flights per destination for both of the airline carriers. Although there was no difference in significance of the distributions between the grouped delayed percentages, we can see here that for every destination, AM West consistently has a higher percentage of delayed flights.  
-&nbsp;&nbsp;&nbsp;&nbsp;This figure plots the percentage of flights per destination for each carrier. We can think of each of these measure as representing the chance of a flight to a certain destination to be delayed given the airline carrier. For example,  
+&nbsp;&nbsp;&nbsp;&nbsp;This figure plots the percentage of flights per destination for each carrier. Each of these measure represents the chance of a flight to a certain destination to be delayed if we know the identity of the airline carrier. For example,  
 P~SAN~( delayed | ALASKA ) = 8.6%  or 0.086 (if you prefer proportions)
 
-&nbsp;&nbsp;&nbsp;&nbsp;With this information we can answer questions like, "If we randomly chose an Alaska flight with a destination of SAN, what is the probability that it will be delayed?"
+&nbsp;&nbsp;&nbsp;&nbsp;This information gives us the conditional probability. With it we can answer questions like, "If we randomly chose an Alaska flight with a destination of SAN, what is the probability that it will be delayed?"  
 
+By weighing the conditional probability P~SAN~( delayed | ALASKA ) against P~SAN~( ALASKA ), we would gt an estimate of the probability that a flight to a SAN is a delayed ALASKA flight.  
+But first we need to calculate P~SAN~( ALASKA ) ....
 
 ```{r}
 #we need to find the total flights for both carriers to a destination.
@@ -203,7 +216,7 @@ ggplot(results_df, aes(fill=Carrier, y=pTotal, x=Destination)) +
     labs( title = '% Flights by Carrier', subtitle= 'what is the chance a flight to a given destination is ALASKA or AM West')
 ```
 
-&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a stacked percentage bar plot. It shows the percentage of total flights to a city for each air carrier. We can think of this as the probability that a flight to a given city was from a specific carrier. For example:
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a stacked percentage bar plot. It shows the percentage of total flights to a city for each air carrier. This gives the probability that a flight to a given city was from a specific carrier. For example:
 P~SAN~( ALASKA ) = 34.1% or 0.341 (if you prefere proportions)  
 
 &nbsp;&nbsp;&nbsp;&nbsp;If we imagined, for the sake of this demo, that there were no other airline carriers operating out of these destinations then this visualization could answer questions like, "If we randomly chose a flight with a destination of SAN, what is the probability that it is an Alaska flight?"  
@@ -251,7 +264,7 @@ ggplot(results_df, aes(fill=Carrier, y=invProb, x=Destination)) +
     labs( title = '% Chance a delayed flight is from a carrier', subtitle= 'if a flight is delayed, what is the % chance it was ALASKA or AM WEST')
 ```
 
-&nbsp;&nbsp;&nbsp;&nbsp;The figure above looks very similar to the previous figure, but is represents some very different information. The previous figure shows the marginal probability, or the probability of pbserving an ALASKA flight or an AM WEST flight at a destination. Before that, we used a bar plot to show the conditional probability of a flight being delayed given we know the airline. The figure above shows a different conditional probability, the chance that a flight is either ALASKA or AM West given we know that the flight was delayed.  
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above looks very similar to the previous figure, but is represents some very different information. The previous figure shows the marginal probability, or the probability of observing an ALASKA flight or an AM WEST flight at a destination. Before that, we used a bar plot to show the conditional probability of a flight being delayed given we know the airline. The figure above shows a different conditional probability, the chance that a flight is either ALASKA or AM West given we know that the flight was delayed.  
 &nbsp;&nbsp;&nbsp;&nbsp;The outcome of the figure above is as expected: The probability that a delayed flight is AM WEST is always greater than the probability that a flight is AM WEST because AM WEST has consistently higher likelihood of delay. In fact, for the case of SFO flights, even though a given flight to SFO is more likely to be an ALASKA flight (57.4%), a delayed flight is more likely to be AM WEST (55.8%) because AM WEST has a much higher rate of delays (28.7% AM WEST vs 16.9% ALASKA).
 
 
