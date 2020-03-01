@@ -1,34 +1,276 @@
 ---
-title: "Assignment 4"
+title: "Tidying and Transforming Data"
 author: "Bonnie Cooper"
-date: "2/23/2020"
-output: html_document
+output:
+  html_document:
+    highlight: tango
+    theme: readable
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+<div class = "row">
+  
+<div class = "col-md-6">
+<br><br><font size="3">   
 
-```{r message=FALSE}
+### Clean Data in, Clear Results out.  
+
+&nbsp;&nbsp;&nbsp;&nbsp;The quality of results relies on the quality of the source data. Therefore, cleaning data is a necessary step before real data analysis can begin.  
+&nbsp;&nbsp;&nbsp;&nbsp; [Hadley Wickham](https://www.jstatsoft.org/article/view/v059i10) has outlined a standard 'tidy' organization for data where:  
+
+* Each variable forms a column
+* Each observation forms a row
+* Each type of observation forms a table
+
+In this demo, we will apply tidy methods to a small, but quite messy dataset.
+
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://i.imgur.com/kK509P6.png)
+</div>
+  
+
+<div class = "col-md-12">
+
+### Set up the environment
+These are the libraries we will use to execute our code
+
+```{r, message=FALSE}
 library( magrittr )
 library( tidyr )
 library( dplyr )
 library( ggplot2 )
+library( ggpubr )
 ```
+<br>  
 
+### Access the data
+&nbsp;&nbsp;&nbsp;&nbsp;The data was generated in MySQL Workbench with the a [SQL script](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/load_flights.sql)  and the result was saved to a [.csv file](https://github.com/SmilodonCub/DATA607/blob/master/flights.csv). Both were uploaded and available on the author's github account.
+
+Here the .csv is accessed & stored as an R data.frame
 ```{r}
-flightsURL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/flightssample_data607.csv'
+#the url for the .csv file
+flightsURL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/flights.csv'
+#read to an R data.frame with read.csv()
 flights_df <- read.csv( flightsURL ,stringsAsFactors = FALSE)
+#display the result
 flights_df
 ```
+<br>  
+
+### Data Formatting
+The dataframe is messy. There are some basic issues with the format that need be fixed:  
+
+* **Column Names**: the first two columns don't have informative labels and some of the destination names are long. Give all the columns names that are short & intuitive. For example, the cities are all flight destinations, so use the airport codes)
+* **Unnecessary Blank Row**: remove
+* **Blank Carrier Values**: Fill in the 'Carrier' value adjacent to the 'delayed' entries in the 'Status' field to the 'Carrier' value entered in the row above.
+* **'chr'->'int'** some features cast as 'chr' values because of ',' characters. Remove the ',' from any values and recast the 'PHX' & 'SEA' features as 'int'
+```{r}
+#make some column names that are more intuitive
+colnames( flights_df ) <- c('Carrier', 'Status', 'LAX', 'PHX', 'SAN', 'SFO', 'SEA')
+
+#filter out a row if all values are blank
+#then, if a cell holds chr values & is filled with an empty string, replace with 'NA'
+#then, use the fill() to replace NA with the value above it.
+flights_df <- flights_df %>% filter_all(all_vars(!is.na(.))) %>% mutate_if(is.character, list(~na_if(.,""))) %>% fill(Carrier)
+
+#2 columns are currently class 'chr' but should be class 'int'. To fix this, 
+#must remove ',' from any values and recast as 'int' 
+flights_df[,c('PHX','SEA')] <- lapply(flights_df[,c('PHX','SEA')], 
+                              function(i) as.integer(sub(',', '', i)))
+
+#displar the result
+flights_df
+```
+
+### Data Tidying
+&nbsp;&nbsp;&nbsp;&nbsp;Now that the data has gone through some preliminary cleaning, it can be restructured with ease using dplyr & tidyr methods.  
+&nbsp;&nbsp;&nbsp;&nbsp;We will 'tidy' the dataset by changing the wide shape to a longer version that gives each observation it's own row. The columns for each destination ( LAX, PHX, SAN, SFO & SEA) will be melted, or stacked into seperate rows in the dataset. To do this, we will use the **pivot_longer()** function from the [tidyr](https://tidyr.tidyverse.org/reference/pivot_longer.html) library.
 
 ```{r}
-colnames( flights_df ) <- c('Carrier', 'Status', 'LAX', 'PHX', 'SAN', ' SFO', 'SEA')
-flights_df <- flights_df %>% filter_all(all_vars(!is.na(.))) 
-%>% mutate_if(is.character, list(~na_if(.,""))) 
-%>% fill(Carrier)
-flights_df
+#use the tidyr pivot_longer() function from tidyr to pivot long a subset of the columns (LAX:SEA) with the labels to a new column "Destination" and the values to another new column "count"
+flights_long <- flights_df %>%
+ pivot_longer(cols = LAX:SEA, names_to = "Destination", values_to = "count")
+
+#display the result
+flights_long
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;This version of the dataframe allows us to further manipulate the dataset to suit the needs of our analysis. For instance, we would like to make direct comparisons of flight status. Therefore, restructuring 'on time' and 'delayed' observations across two distinct columns would facilitate this analysis. This is made simple by the **pivot_wider()** function from the [tidyr](https://tidyr.tidyverse.org/reference/pivot_wider.html) library.
+
+```{r}
+#use the tidyr pivot_wider() function to increase the width by splitting 'Status' into two columns: 'on time' and 'delayed'
+flights_status <- flights_long %>% pivot_wider( names_from = Status, values_from = count )
+
+flights_status
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;Great!, now that 'on time' and 'delayed' variables have distinct columns, we can perform some simple calculations. Here we will use the **mutate()** function from [dplyr](https://dplyr.tidyverse.org/reference/mutate.html) to add new features to our data.frame. Note that we can derive columnwise manipulations of both pre-existing features and features we generate from within our call to mutate().
+
+
+```{r}
+#use the mutate() function from dplyr to add new features
+results_df <- flights_status %>% mutate( total4Carrier = `on time`+ delayed,
+                           pOT = round( `on time`/total4Carrier*100, 1) ,
+                           pD = round( delayed/total4Carrier*100, 1 ) )
+
+results_df
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;Observe that in the above call the mutate(), a new variable, 'total' is formed and is immediately available to calculate the subsequent features 'pOT' & 'pD'.  
+
+<div class = "col-md-6">
+<br><br>  
+
+### Data Visualization
+
+&nbsp;&nbsp;&nbsp;&nbsp;Now we are ready to draw some insights from our data set. The current structure of the data facilitates visualization with calls to ggplot().  
+
+Let's start by plotting:  
+
+* Overall Percent Delayed Flights
+* Delayed Flight Percent by Destination
+* Stacked Percent of Flight by Carrier
+
+
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://i.imgur.com/8rro7GX.png)
+
+</div>
+  
+
+<div class = "col-md-12">
+
+```{r}
+#make a boxplot of the % delayed flights for each carrier
+p <- ggplot(results_df, aes(x=Carrier, y=pD, fill=Carrier)) + 
+  geom_boxplot() +
+  stat_compare_means() +    
+  stat_compare_means( aes(label = ..p.signif..), label.x = 0.92, label.y = 27.5) +
+  ylab( 'Delayed %') +
+  labs( title = 'Delayed Flight %', subtitle= 'overall airline performance')
+p
+```
+<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a box plot showing the distribution of the % delayed flights of each airline carrier for the destinations we have data on. There is a trend for AM West flights to have a higher chance of being delayed. However, the difference between the two distributions was not found to be significant (p=0.22,Wilkoxon t-test).
+
+```{r}
+#make a bar plot of the %delayed flights for each airline for each destination
+ggplot( results_df, aes(fill=Carrier, y=pD, x=Destination)) + 
+    geom_bar(position="dodge", stat="identity" ) +
+    ylab( '% Delayed') +
+    labs( title = 'Delayed Flight %', subtitle= 'what is the % chance that a flight to a destination is delayed for each Carrier')
+                 
 ```
 
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above plots the percentage of delayed flights per destination for both of the airline carriers. Although there was no difference in significance of the distributions between the grouped delayed percentages, we can see here that for every destination, AM West consistently has a higher percentage of delayed flights.  
+&nbsp;&nbsp;&nbsp;&nbsp;This figure plots the percentage of flights per destination for each carrier. We can think of each of these measure as representing the chance of a flight to a certain destination to be delayed given the airline carrier. For example,  
+P~SAN~( delayed | ALASKA ) = 8.6%  or 0.086 (if you prefer proportions)
 
-https://blog.rstudio.com/2014/07/22/introducing-tidyr/
+&nbsp;&nbsp;&nbsp;&nbsp;With this information we can answer questions like, "If we randomly chose an Alaska flight with a destination of SAN, what is the probability that it will be delayed?"
+
+
+```{r}
+#we need to find the total flights for both carriers to a destination.
+#pivot_wider the carrier totals by destination...
+findT <- results_df %>% pivot_wider( names_from = Destination, values_from = total4Carrier )
+#then take a sum of the columns (ignore NA)
+totals <- colSums( findT[,c('LAX','PHX','SAN','SFO','SEA')], na.rm = TRUE) 
+#now we just need to rep the totals*2 and pass he values to a 
+#new column in our results dataframe
+results_df <- results_df %>% mutate( total4All = as.numeric(rep( totals,2)),
+                                     pTotal = total4Carrier/total4All )
+
+#for plottong purposes: positions for labels
+results_df$labelpos <- ifelse(results_df$Carrier=="ALASKA",
+                         1 - results_df$pTotal/2, results_df$pTotal/2)
+# Make a figure with the stacked percentages of flights 
+#from each carrier to a destination
+ggplot(results_df, aes(fill=Carrier, y=pTotal, x=Destination)) + 
+    geom_bar(position="fill", stat="identity") +
+    scale_y_continuous(labels = scales::percent) +
+    geom_text(aes(label = paste0(round(pTotal*100,1),"%"),y=labelpos),size = 3) +
+    ylab( '% of Total Flights to a destination') +
+    labs( title = '% Flights by Carrier', subtitle= 'what is the chance a flight to a given destination is ALASKA or AM West')
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above is a stacked percentage bar plot. It shows the percentage of total flights to a city for each air carrier. We can think of this as the probability that a flight to a given city was from a specific carrier. For example:
+P~SAN~( ALASKA ) = 34.1% or 0.341 (if you prefere proportions)  
+
+&nbsp;&nbsp;&nbsp;&nbsp;If we imagined, for the sake of this demo, that there were no other airline carriers operating out of these destinations then this visualization could answer questions like, "If we randomly chose a flight with a destination of SAN, what is the probability that it is an Alaska flight?"  
+
+If we continue with our SAN example, we can summarize the information as follows:  
+<br>
+
+|  Status | ALASKA (34.1%) | AM WEST (65.9%) |
+|:-------:|----------------|-----------------|
+| on time |      91.4%     |      85.5%      |
+| delayed |      8.6%      |      14.5%      |
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;Now we can use Bayes' Theorem to invert the conditional probability to find a different relation in the data: the Probability of a flight to a certain destination to be from a certain Carrier given the flight was delayed. or,  
+P~SAN~( ALASKA | delayed )  
+In plain words, this is like asking, "If we randomly chose an delayed flight with a destination of SAN, what is the probability that it was an ALASKA flight?" 
+
+Applying Bayes' Theorem:   
+
+P~SAN~( ALASKA | delayed )  = $\frac{P_{SAN}( delayed | ALASKA ) * P_{SAN}( ALASKA )}{P_{SAN}( delayed | ALASKA ) x P_{SAN}( ALASKA ) + P_{SAN}( delayed | AM WEST ) x P_{SAN}( AM WEST )}$    
+
+&nbsp;&nbsp;&nbsp;&nbsp;That looks really long and complicated. Don't be intimidated! We already have all of the information needed in our data.frame... 
+
+```{r}
+#let's add two new columns that shift the values for the 'pD' & 'pTotal' 
+#features for the opposite carrier are in the same row.
+#this will make calculating the inverse probability a 
+#relatively simple columnwise opperation
+results_df$opppD <- results_df$pD[ c(6:10,1:5)]
+results_df$opppTotal <- results_df$pTotal[ c(6:10,1:5)]
+#now, apply Bayes!
+results_df$invProb <- (results_df$pD*results_df$pTotal)/
+    (results_df$pD*results_df$pTotal + results_df$opppD*results_df$opppTotal)
+
+#for plotting purposes: label positions
+results_df$labelpos <- ifelse(results_df$Carrier=="ALASKA",
+                         1 - results_df$invProb/2, results_df$invProb/2)
+#make a stacked barplot showing the chance that, given a flight is delayed,
+#that it was either ALASKA or AM WEST
+ggplot(results_df, aes(fill=Carrier, y=invProb, x=Destination)) + 
+    geom_bar(position="fill", stat="identity") +
+    scale_y_continuous(labels = scales::percent) +
+    geom_text(aes(label = paste0(round(invProb*100,1),"%"),y=labelpos),size = 3) +
+    ylab( '% Carrier') +
+    labs( title = '% Chance a delayed flight is from a carrier', subtitle= 'if a flight is delayed, what is the % chance it was ALASKA or AM WEST')
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above looks very similar to the previous figure, but is represents some very different information. The previous figure shows the marginal probability, or the probability of pbserving an ALASKA flight or an AM WEST flight at a destination. Before that, we used a bar plot to show the conditional probability of a flight being delayed given we know the airline. The figure above shows a different conditional probability, the chance that a flight is either ALASKA or AM West given we know that the flight was delayed.  
+&nbsp;&nbsp;&nbsp;&nbsp;The outcome of the figure above is as expected: The probability that a delayed flight is AM WEST is always greater than the probability that a flight is AM WEST because AM WEST has consistently higher likelihood of delay. In fact, for the case of SFO flights, even though a given flight to SFO is more likely to be an ALASKA flight (57.4%), a delayed flight is more likely to be AM WEST (55.8%) because AM WEST has a much higher rate of delays (28.7% AM WEST vs 16.9% ALASKA).
+
+
+### Conclusions  
+&nbsp;&nbsp;&nbsp;&nbsp;In this demo will practiced tidying and transforming a dataset. We used a small, but quite messy dataset that summarized the on time and delayed status of arrivals to several airports for two airline carriers. After some initial formatting, we used methods from tidyr and dplyer to further clean our data. Making the data orderly is beneficial because it allows time and resources to be focused on generating insights from the data. Once the data was made tidy, we performed a brief analysis to compare arrival delays for the the two airlinees.  
+
+Hopefully this demo reinforced the idea that a clean & tidy dataset is it's own reward!
+<br><br>
+
+![](https://i0.wp.com/cdn.hallme.com/uploads/calvin-and-hobbs-2.gif?resize=600%2C191&ssl=1)
+
+## References  
+
+All images: Watterson, Bill. The Essential Calvin and Hobbes: A Calvin and Hobbes Treasury. , 1988. Print.
+Wickham, Hadley. "Tidy data." Journal of Statistical Software 59.10 (2014): 1-23.  
+[introducing tidyr](https://blog.rstudio.com/2014/07/22/introducing-tidyr/)  
+[tidyr tidyverse](https://tidyr.tidyverse.org/)  
+[Pimp my Rmd](https://holtzy.github.io/Pimp-my-rmd/)  
+
+
+</div>
+</div>
