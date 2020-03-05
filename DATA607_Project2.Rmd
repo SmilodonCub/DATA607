@@ -26,4 +26,10 @@ head( disaster_DF )
 ```{r}
 names( disaster_DF )
 ```
+```{r}
+nrow( disaster_DF)
+```
+```{r}
+unique( disaster_DF$incidentType )
+```
 

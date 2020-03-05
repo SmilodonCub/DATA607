@@ -289,4 +289,30 @@ Fitting graph: a fitting graph shows the generalization performance as well as t
 2. General Methods for Avoiding Overfitting. Nested holdout testing: have a subtraining set to model/test how to fit the validation set before applying to the final test set. It is nested because a second holdout procedure is performed on the training set selected by the first holdout procedure.
 
 Avoiding overfitting for parameter optemization
-regularization: instead of just optimizing the fit to the data, we optimize some combination of fit and simplicity.
+regularization: instead of just optimizing the fit to the data, we optimize some combination of fit and simplicity. 
+
+
+<br>
+
+### Chapter 6 
+### Similarity, Neighbors, and Clusters
+
+the closer two objects are in feature space, the more similar they are.
+**Euclidean Distance** we can compute the overall distance by computing the distances of the inidividual dimentions -the individual features in our setting.The distance is just a number -it has no units, and no meaningful interpretation. It is only useful for comparing the similarity of one pair of instances to that of another pair. It turns out that comparing similarities i etremely useful.
+**nearest neighbors** most similar instances
+- classification with nearest neighbors: using nearest neighbors to predict an unknown feature by majority vote. probability estimation & regression
+
+How many neighbors is too much influence?
+**k-NN** where the k refers to the number of neighbors used. if k=n, the entire dataset would be used & would find the average across feature space. for classification this would predict the mojority class of the entire dataset; for regression the average of all target values; for class probability estimation, the 'base rate' probability. the k in a k-NN classifier is a complexity parameter.
+
+**Weighted Scoring** scale the weight by the reciprocal of the square of the distance. when using weighted scoring the exact value of k is much less critical than with majority voting or unweighted averaging.
+
+How to choose k? conduct a cross-validation or other holdout testing on a training set, for a variety of different values of k, search for one that gives the best performance on the training data. then when we have chosen a k, we build a kNN model from the entire training set.
+
+**intelligibility** issues: the justification of a specific decision and the intelligibility of an entire model.
+
+numerical attributes may have vastly differetn ranges and unless they are scaled appropriately the effect of one attribute with a wide range can swamp the effect of another with a much smaller range.
+
+**curse of dimensionality** since all of the attributes contribute to the distance calculations, instance similarity can be confused and misled by the presence of too many irrelevant attributes.
+
+**feature selection** the judicious determination of features that should be included in the data mining model.
