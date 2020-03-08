@@ -1,0 +1,146 @@
+---
+title: "Kaggle Dataset: Video Game Sales 2019"
+author: "Bonnie Cooper"
+output:
+  html_document:
+    highlight: tango
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<div class = "row">
+  
+<div class = "col-md-6">
+<br><br><font size="3">   
+
+## Visualizing Video Game Genre Sales as a Function of Region or Year
+
+### Setting the environment
+These are the R libraries we will need for this demo:
+```{r, message=FALSE}
+library( magrittr )
+library( dplyr )
+library( tidyr )
+library( ggplot2 )
+```
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://www.geek.com/wp-content/uploads/2016/07/video-game-controllers-625x350.jpg)
+</div>
+  
+
+<div class = "col-md-12">
+
+
+### Accessing the data
+This demo will utilize the [Kaggle Video Game Sales 2019 dataset](https://www.kaggle.com/rush4ratio/video-game-sales-with-ratings)  
+The data is openly available for the public to download as an .csv file. The .csv file was uploaded to the author's github and can be directly accessed it via the raw link and load to an R data.frame:
+```{r }
+#the url for the .csv file
+URL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/vgsales-12-4-2019-short.csv'
+#read to an R data.frame with read.csv().
+vgs_df <- read.csv( URL ,stringsAsFactors = FALSE )
+```
+
+### Inspecting the data.frame
+Get a general feel for the data by inspecting some basic: dataframe size dimensions, feature names, feature summaries
+```{r }
+#data.frame dimensions
+dim( vgs_df )
+#feature names
+colnames( vgs_df )
+#feature summary
+summary( vgs_df )
+```
+
+
+### Tidying the data.frame with dplyr & tidyr methods  
+This data.frame is mercifully clean. We can simply select the features we are most interested in visualizing and 'tidy' them for use with ggplot2 plotting functions
+```{r}
+genreVGS <- vgs_df %>% 
+    #Subset the data to include columns: Genre + regional sales columns + year
+    select( Genre, NA_Sales, PAL_Sales, JP_Sales, Other_Sales, Year ) %>%
+    #Drop rows without regional sales information
+    drop_na() %>%
+    #pivot the data.frame longer such that each regional sales observation has it's own row
+    pivot_longer(cols = NA_Sales:Other_Sales, names_to = 'Region', values_to = 'Sales') %>%
+    arrange( Year )
+head( genreVGS )
+```
+
+### Visualizing Video Game Genre Sales as a function of Sales Region  
+Great!, the data.frame is well organized, now just a little more tayloring to create specific plots. To visualize Genre sales by Region, let's select these feature with group_by():
+```{r}
+genre_byregionVGS <- genreVGS %>%
+    #group_by() to aggregate the data by the features Genre & Region
+    group_by( Genre, Region ) %>%
+    #summarise() to find the total sales for the grouped features
+    summarise( n = sum( Sales ) ) %>%
+    #mutate() to create a new column that calculates the proportion of sales
+    mutate( proportion = n/sum( n ))
+head( genre_byregionVGS )
+```
+
+Visualize with a ggplot2 [Proportional Stacked Bar Area Chart](https://www.r-graph-gallery.com/48-grouped-barplot-with-ggplot2.html) 
+
+```{r}
+ggplot(genre_byregionVGS, aes(x=genre_byregionVGS$Region, y=genre_byregionVGS$proportion, fill=genre_byregionVGS$Genre)) + 
+    geom_bar(position="fill", stat="identity",color ='black') +
+    scale_color_manual(values = c(NA, 'black'), guide=F) +
+    ggtitle('Genre Sales Proportion per Region') +
+    xlab( 'Region' ) +
+    ylab( 'Regional Sales Proportion') +
+    scale_fill_discrete(name = "Genre")
+
+```
+
+### Visualizing Video Game Genre Sales as a function of Sales Region
+Again, just a little more tayloring to create specific plots. To visualize Genre sales by Year, let's select these feature with group_by():
+```{r}
+genre_byyearVGS <- genreVGS %>%
+    #group_by() Genre & Year
+    group_by( Genre, Year ) %>%
+    #summarise() to find the total sales for the grouped features
+    summarise( genreAnnualSales = sum( Sales ) )
+
+#The total Annual Sales is different for each year, so to calculate the correct proportions, we need to calculate the each year sales. This is passed to a data.frame:
+yearTotal <- genreVGS %>%
+    group_by( Year ) %>%
+    summarise( annualSales = sum( Sales ) )
+
+#Join the information in both dataframes so that each row of 'genre_byyearVGS' is associated with the correct total annual sales
+genre_byyearVGS <- genre_byyearVGS %>%
+    #full_join() to join the data.frames by 'Year'
+    full_join( yearTotal, genre_byyearVGS, by='Year' ) %>%
+    #mutate to create a new column that holds calculations of the proportion of sales
+    mutate( proportion = genreAnnualSales/annualSales*100)
+head(genre_byyearVGS)
+
+```
+
+Visualizing Video Game Genre Sales by percent of sales for each year of data collection with a ggplot2 proportion stacked bar plot:
+
+```{r}
+# Plot
+ggplot(genre_byyearVGS, aes(x=genre_byyearVGS$Year, y=genre_byyearVGS$proportion, fill=genre_byyearVGS$Genre)) + 
+    geom_bar(position="fill", stat="identity",color ='black') +
+    scale_color_manual(values = c(NA, 'black'), guide=F) +
+    xlim( 1985,2019 ) +
+    ggtitle('Genre Sales Proportion per Year') +
+    xlab( 'Year' ) +
+    ylab( 'Annual Sales Proportion') +
+    scale_fill_discrete(name = "Genre")
+
+
+```
+
+### In Closing  
+In this demo we visualized the video game regional sales data that was make available on [Kaggle](https://www.kaggle.com/rush4ratio/video-game-sales-with-ratings). The data needed few steps of processing before meaninful visualization could be generated. The R libraries 'dplyr' & 'tidyr' did most of our heavy lifting. Stacked bar plots were constructed that explored a few relations of data features. First, The proportion of Genre sales were calculated and displayed as a function of sales region. The plot is quite busy, but close inspection can show variations across the regions. For example, Visual Novel sales make up a relatively larger proportion of sales for the JP_Sales than any other region whereas PAL_Sales market has the highest proportion of sales for Boardgames. The next figure plots proportion of genre sales for each year. This figure is interesting, because it shows that over time, more genre designation were added over the course of data collection.  
+
+
+### References
+[Proportional Stacked Bar Area Chart](https://www.r-graph-gallery.com/48-grouped-barplot-with-ggplot2.html)  
+[Kaggle Video Game Sales 2019 dataset](https://www.kaggle.com/rush4ratio/video-game-sales-with-ratings)  
