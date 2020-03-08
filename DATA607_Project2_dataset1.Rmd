@@ -1,0 +1,294 @@
+---
+title: "The United Nations International Migration Dataset"
+author: "Bonnie Cooper"
+output:
+  html_document:
+    highlight: tango
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<div class = "row">
+  
+<div class = "col-md-6">
+<br><br><font size="3">   
+
+## Visualizing human migration patterns with chord diagrams in R using the circlize package
+
+### Setting the environment
+These are the R libraries we will need for this demo:
+```{r, message=FALSE}
+library( magrittr )
+library( dplyr )
+library( tidyr )
+library( DataCombine )
+library( circlize )
+```
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://www.worldatlas.com/r/w1200-h701-c1200x701/upload/65/f0/1e/shutterstock-734188318.jpg)
+</div>
+  
+
+<div class = "col-md-12">
+
+
+### Accessing the data
+This demo will utilize the [United Nations International Migration Dataset](https://www.un.org/en/development/desa/population/migration/data/estimates2/estimates19.asp)  
+The data is openly available for the public to download as an .xlsx file. The data has several sheets & we will be working with 'Table 1: Total migrant stock at mid-year by origin and major area, region, country or area of destination'. The Table was exported to .csv and uploaded to the author's github.  
+Directly access it via the raw link and load to an R data.frame:
+```{r }
+#the url for the .csv file
+URL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/UN_MigrantStockByOriginAndDestination_2019.csv'
+#read to an R data.frame with read.csv().
+#There are multiple rows of header in the .csv file that are not relevant, so we will skip them with the 'skip' parameter
+migrant_df <- read.csv( URL ,stringsAsFactors = FALSE, skip=14)
+#display the result
+dim( migrant_df )
+```
+
+There are several basic steps we will take to clean the data before we 'tidy' the data:  
+
+1. The column names are a mess, let's fix them
+2. Subset the data to work with the data from 2019
+
+```{r}
+#1 Column Names
+
+#the original data has header information distributed across 2 rows.
+#we need to rearrage labels to name sense of this.
+
+#the initial names given when the data was loaded as a data.frame:
+initialColnames <- colnames( migrant_df )
+#pass the strings from the 1st row to 'newColnames
+newColnames <- unname( unlist( migrant_df[1,] ) )
+#the 1st 6 elements from 'initialColnames' are still useful here
+newColnames[1:6] <- initialColnames[1:6]
+#use filter from dplyr to remove the first row
+migrant_df <- filter( migrant_df, row_number() > 1 )
+#use colnames() to set the column names of the data.frame to the values in 'newColnames'
+colnames( migrant_df ) <- newColnames
+#display the column names
+colnames( migrant_df )[1:10]
+#apply rename() on few of the columns to a better format
+migrant_df <- rename( migrant_df, DestArea = Major.area..region..country.or.area.of.destination )
+migrant_df <- rename( migrant_df, DataType = Type.of.data..a. )
+#display the column names
+colnames( migrant_df )[1:10]
+```
+
+```{r}
+#2 Subset for year 2019
+
+#use filter to work with a subset of the data. just the year 2019
+migrant2019_df <- filter( migrant_df, Year == 2019 )
+```
+
+The column 'DestArea' contains heterogeneous data. Most rows are specific to a country whereas a few contain information for a region. the rows for countries are group underneath the region they belong to.  
+Here we will disambiguate this information by creating new columns in the dataframe with region information for each country.  
+
+First we will make a data.frame that holds the information to relate country to region:
+
+```{r} 
+
+#data.frame that defines regions
+subRegions_df <- data.frame( ID=c(910, 911, 913, 914, 912, 922, 5500, 5501, 906, 920, 915, 916, 931, 927, 928, 954, 957, 923, 924, 925, 926, 918), #ID = code for a region
+                             Region=c("E_Africa", "Mid_Africa", "S_Africa", "W_Africa", "N_Africa", "W_Asia", "C_Asia", "S_Asia", "E_Asia", "SE_Asia", "Caribbean", "C_America", "S_America", "Australia_NZ", "Melanesia", "Micronesia", "Polynesia", "E_Europe", "N_Europe", "S_Europe", "W_Europe", "N_America")) 
+subRegions_df$Code= list(c(108, 174, 262, 232, 231, 404, 450, 454, 480, 175, 508, 638, 646, 690, 706, 728, 800, 834, 894, 716),
+        c(24, 120, 140, 148, 178, 180, 226, 266, 678), 
+        c(72, 748, 426, 516, 710), 
+        c(204, 854, 132, 384, 270, 288, 324, 624, 430, 466, 478, 562, 566, 654, 686, 694, 768), 
+        c(12, 818, 434, 504, 729, 788, 732), 
+        c(51, 31, 48, 196, 268, 368, 376, 400, 414, 422, 512, 634, 682, 275, 760, 792, 784, 887), 
+        c(398, 417, 762, 795, 860), 
+        c(4, 50, 64, 356, 364, 462, 524, 586, 144), 
+        c(156, 344, 446, 408, 392, 496, 410), 
+        c(96, 116, 360, 418, 458, 104, 608, 702, 764, 626, 704), 
+        c(660, 28, 533, 44, 52, 92, 535, 136, 192, 531, 212, 214, 308, 312, 332, 388, 474, 500, 630, 659, 662, 670, 534, 780, 796, 850), 
+        c(84, 188, 222, 320, 340, 484, 558, 591), 
+        c(32, 68, 76, 152, 170, 218, 238, 254, 328, 600, 604, 740, 858, 862), 
+        c(36, 554), 
+        c(242, 540, 598, 90, 548), 
+        c(316, 296, 584, 583, 520, 580, 585), 
+        c(16, 184, 258, 570, 882, 772, 776, 798, 876), 
+        c(112, 100, 203, 348, 616, 498, 642, 643, 703, 804), 
+        c(830, 208, 233, 234, 246, 352, 372, 833, 428, 440, 578, 752, 826), 
+        c(8, 20, 70, 191, 292, 300, 336, 380, 470, 499, 807, 620, 674, 688, 705, 724),
+        c(40, 56, 250, 276, 438, 442, 492, 528, 756), 
+        c(60, 124, 304, 666, 840)) #country codes for each region in "Region"
+
+#use tidyr to unnest the lists to give each value a row
+subRegions_df <- subRegions_df %>% unnest( Code )
+head( subRegions_df )
+```
+
+Now join the information from the subRegions_df to the migrant2019_df
+```{r}
+#use tidyr's left_join() to associate Region & region ID from the subRegions DF with each row of migrant2019_df if there is a match by the column 'Code'
+migrantSubReg_df <- left_join( migrant2019_df, subRegions_df, by='Code' ) 
+```
+
+### Tidy the data to be format friendly for use with chordDiagram()
+For the first visualization, we will try to take a look at the flow of migrants from each country
+```{r}
+#filter out all rows that have 'NA' for Region or ID, since these have no match to the countries that we are interested in plotting
+migrantCountry_df <- migrantSubReg_df %>% filter( !is.na( Region ) )
+#use pivot_longer to elongate the data.frame such that each observation for an origin country has a row entry with each destination. Then, since we just want to plot countries, use filter() toremove rows without a matched region code
+migrantCountry_df <- migrantCountry_df %>% pivot_longer(Afghanistan:Zimbabwe, names_to= "origin_country", values_to= "migrants" ) %>% filter( !is.na( migrants ) & migrants!='')
+
+#select only the column necessary for plotting
+migrantCountryPlot_df <- migrantCountry_df %>% select( DestArea, origin_country, migrants ) 
+#format the data as numeric
+migrantCountryPlot_df$migrants <- as.numeric( gsub(",","",migrantCountryPlot_df$migrants))
+```
+
+### Visualize UN Migration Data by Country  
+[Data-to-viz.com](https://www.data-to-viz.com/graph/chord.html) has prepared an excellent tutorial on chordDiagrams with [circlize](https://jokergoo.github.io/circlize_book/book/). This is used as a template to plot the data:
+
+```{r}
+# parameters
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 1, track.margin = c(-0.1, 0.1), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+
+# Base plot
+chordDiagram(
+  x = migrantCountryPlot_df, 
+  transparency = 0.25,
+  directional = 1,
+  direction.type = c("arrows", "diffHeight"), 
+  diffHeight  = -0.04,
+  annotationTrack = "grid", 
+  annotationTrackHeight = c(0.05, 0.1),
+  link.arr.type = "big.arrow", 
+  link.sort = TRUE, 
+  link.largest.ontop = TRUE)
+
+```
+
+That does not look good at all.  
+There are far too many data chords to make sense of in this figure.
+Here the data is plotted again by region instead of by country:
+
+```{r}
+#start tidying the data to calculate the values by region instead of by country
+migrantSubReg_df <- migrantSubReg_df %>% 
+    filter( Code %in%  subRegions_df$ID) %>% #filter rows with a 'Code' value listed somewhere in subRegions_df$ID
+    pivot_longer(cols = Afghanistan:Zimbabwe, names_to = "Origin_Country", values_to = "count") %>% #pivot longer by country
+    select( -Year, -Sort.order, -`Other South`, -`Other North`, -ID, -Region, -Notes, -DataType) #select out some unnecessary columns
+migrantSubReg_df$count <- as.numeric( gsub(",","",migrantSubReg_df$count))
+migrantSubReg_df <- rename( migrantSubReg_df, destinationCode = Code )
+```
+
+Warning: you are about to see a for loop in R.
+I couldn't find any other way ¯\\_(ツ)_/¯ 
+
+```{r}
+#find the country code for each country in 'Origin_Country'
+countryCode = c()
+for (country in seq(1,length(migrantSubReg_df$Origin_Country))){
+    idx <- which(grepl(paste('\\<',migrantSubReg_df$Origin_Country[country],'\\>', sep=''), migrant2019_df$DestArea))
+    if ( length( idx ) == 0 ) {
+        countryCode[country] <-NA
+    } else if ( length( idx ) > 1 ) {
+        countryCode[country] <-NA
+    } else {countryCode[country] <- migrant2019_df$Code[idx]}
+}
+
+```
+
+Tidy the data to find the values in terms of origin region instead of origin country  
+
+1. make data.frame long
+2. replace country strings with appropriate region strings
+3. reshape the data to plot migration flow
+
+```{r}
+#1. make the data.frame long
+
+migrantSubReg_df$Code <- countryCode
+#use dplyr's left_join associate each country code with the appropriate region
+migrantSubReg_df <- left_join( migrantSubReg_df, subRegions_df, by='Code' ) %>% filter( !is.na( Region ) ) #filter out NA
+
+migrantSubReg_df <- migrantSubReg_df %>% 
+    select( -Origin_Country, -Code, -ID ) %>% #deselect uneeded columns
+    group_by( DestArea, Region) %>% 
+    summarise( Counts = sum( count )) #find the sum for count values
+```
+
+```{r}
+#2. replace strings using FindReplace() from DataCombine
+
+replaceStrings <- data.frame( from = c( "Australia / New Zealand", "Caribbean", "Central America", "Central Asia", "Eastern Africa", "Eastern Asia", "Eastern Europe", "Melanesia", "Micronesia", "Middle Africa", "Northern Africa", "NORTHERN AMERICA", "Northern Europe", "Polynesia", "South America", "South-Eastern Asia", "Southern Africa", "Southern Asia", "Southern Europe", "Western Africa", "Western Asia", "Western Europe"), to = c("Australia_NZ", "Caribbean", "C_America", "C_Asia", "E_Africa", "E_Asia", "E_Europe", "Melanesia", "Micronesia", "Mid_Africa", "N_Africa", "N_America", "N_Europe", "Polynesia", "S_America", "SE_Asia", "S_Africa", "S_Asia", "S_Europe", "W_Africa", "W_Asia", "W_Europe"))
+
+migrantSubReg_df <- FindReplace(data = as.data.frame(migrantSubReg_df), Var = "DestArea", replaceData = replaceStrings, from = "from", to = "to", exact = FALSE)
+```
+
+```{r}
+#3 manipulate the data by pivoting wide, then long. basically transposes the data.frame
+migrantSubReg_df <- migrantSubReg_df %>% 
+    pivot_wider( names_from = DestArea, values_from = Counts) %>% 
+    pivot_longer( -Region, names_to = "DRegion", values_to = "count" )
+head(migrantSubReg_df)
+```
+
+### Visualize UN Migration Data by Region
+
+```{r, message=F, warning=F}
+# parameters
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.1), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+# color palette
+mycolor <- rainbow(23, alpha = 1)
+mycolor <- mycolor[sample(1:23)]
+
+# Base plot
+chordDiagram(
+  x = migrantSubReg_df, 
+  grid.col = mycolor,
+  transparency = 0.25,
+  directional = 1,
+  direction.type = c("arrows", "diffHeight"), 
+  diffHeight  = -0.04,
+  annotationTrack = "grid", 
+  annotationTrackHeight = c(0.05, 0.1),
+  link.arr.type = "big.arrow", 
+  link.sort = TRUE, 
+  link.largest.ontop = TRUE)
+
+# Add text and axis
+circos.trackPlotRegion(
+  track.index = 1, 
+  bg.border = NA, 
+  panel.fun = function(x, y) {
+    
+    xlim = get.cell.meta.data("xlim")
+    sector.index = get.cell.meta.data("sector.index")
+    
+    # Add names to the sector. 
+    circos.text(
+      x = mean(xlim), 
+      y = 2, 
+      labels = sector.index, 
+      adj = c(0, degree(5)), 
+      facing = "clockwise",
+      cex = 0.6
+      )
+  }
+)
+```
+
+### In Closing
+In this demo we created a chord diagram from the raw migration data provided by the United Nations. In the figure above, we can see some interesting trends: Some regions appear to have more immigrants than emigrants (e.g. North America, Western Europe & Western Asia) whereas other regions have more emigrants (e.g. South East Asia & Central America).  
+The data needed many steps of processing before meaninful visualization could be generated. The R libraries 'dplyr' & 'tidyr' did most of our heavy lifting.
+
+### References
+[Tidy untidy United Nations’ migration data with tidyr](https://blog.exploratory.io/tidy-untidy-united-nations-migration-data-with-tidyr-167cbd24c5c2)
+[Data-to-Vis: Chord Diagram](https://www.data-to-viz.com/graph/chord.html)
+[United Nations International Migration Data](https://www.un.org/en/development/desa/population/migration/data/estimates2/estimates19.asp)  
