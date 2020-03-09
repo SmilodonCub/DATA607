@@ -1,0 +1,176 @@
+---
+title: "Melting a Data.frame with dplyr & tidyr"
+author: "Bonnie Cooper"
+output:
+  html_document:
+    highlight: tango
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<div class = "row">
+  
+<div class = "col-md-6">
+<br><br><font size="3">   
+
+## Elongating a Dataset with dplyr & tidyr
+
+### Setting the environment
+These are the R libraries we will need for this demo:
+```{r, message=FALSE}
+library( magrittr )
+library( dplyr )
+library( tidyr )
+library( ggplot2 )
+```
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://theamusedonlooker.files.wordpress.com/2019/04/screenshot_20190419-204650__011066078530361167892.jpg?w=840)
+</div>
+  
+
+<div class = "col-md-12">
+
+### Creating the data:
+&nbsp;&nbsp;&nbsp;&nbsp;This demo will use data that summarizes Gender Education Attainment in a table with a double-layered header. This assigment calls for the data to be formatted as a .csv file, so in this section we will write the data as input to a .csv file:
+
+```{r}
+eduDATA_df <- rbind(c(NA,'Male', 'Male', 'Male', 'Male', 'Male', 'Female', 'Female', 'Female', 'Female', 'Female'),
+                    c(NA, 'No HS', 'HS', 'Associate', "Bachelor's", 'Graduate', 'No HS', 'HS', 'Associate', "Bachelor's", 'Graduate' ),
+                    c('T066_008', 'T066_009', 'T066_010', 'T066_011', 'T066_012', 'T066_013', 'T066_014', 'T066_015', 'T066_016', 'T066_017', 'T066_018'),
+                    c('Northeast Region', 24801, 36714, 44765, 65177, 89449, 16523, 24251, 31455, 45593, 61203),
+                    c('Midwest Region', 23530, 33606, 41180, 59243, 77325, 15471, 21713, 26944, 39534, 54246),
+                    c('South Region', 22065, 31552, 40097, 59711, 81744, 14659, 21530, 27243, 41210, 53100),
+                    c('West Region', 22554, 32289, 42127, 62069, 86476, 15250, 23230, 29402, 42527, 57915 ))
+
+#write the table to a .csv file
+#substitute your filepath below to save to your local machine
+write.table( eduDATA_df,file='/home/bonzilla/Desktop/MSDS2020/DATA607_DataAcquMan/eduDATA_df.csv', sep = ",", col.names=F, row.names=F)
+```
+
+
+### Read .csv file into R
+&nbsp;&nbsp;&nbsp;&nbsp;The .csv file that was generated in the previous block of code was uploaded to the author's github accout. We can read the .csv into an R data.frame via the URL link to the raw data:
+
+```{r}
+#the url for the .csv file
+URL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/eduDATA_df.csv'
+#read to an R data.frame with read.csv().
+eduDATA_df <- read.csv( URL ,stringsAsFactors = FALSE )
+eduDATA_df
+```
+
+<div class = "row">
+  
+<div class = "col-md-6">
+
+### Tidy the data.frame with tidyr & dplyr  
+
+&nbsp;&nbsp;&nbsp;&nbsp;This is a very small data.frame, but it can be used to illustrate a big point: tidy data facilitate visualization & downstream analysis. Tidying, or wrangling the data is often necessary to perform before more glamorous techniques (e.g. modeling) can be applied to a dataset. We will only be performing some brief analysis and visualization of this data.frame, but the main point is to observe how easy these later steps occur if we take the time to properly format the data.frame.  
+&nbsp;&nbsp;&nbsp;&nbsp;In this demo, the 'eduDATA_df' data.frame will be changed from the present 'wide' version into a longer, 'melted' version; it will hold the same information, but will be rearranged to facilitate visualization and analysis.  
+<br>  
+Let's start cleaning!
+
+</div>
+  
+<div class = "col-md-6">
+<br><br>![](https://www.kdnuggets.com/images/cartoon-machine-learning-class.jpg)
+</div>
+
+<div class = "col-md-12">
+```{r}
+
+eduDATA_df <- eduDATA_df %>% 
+    #there are uninformative text labels in row2: 
+    #remove them with tidyverse methods
+    filter( row_number() != 2L ) %>%
+    #rename the columns with dplyr rename()
+    rename( Region = NA., Male.NoHS = Male, Male.HS = Male.1, Male.Associate = Male.2, Male.Bachelors = Male.3, Male.Graduate = Male.4, Female.NoHS = Female, Female.HS = Female.1, Female.Associate = Female.2, Female.Bachelors = Female.3, Female.Graduate = Female.4) %>%
+    #remove row 2
+    filter( row_number() != 1L ) %>%
+    #pivot_long() to give each observation it's own row in the data.frame
+    pivot_longer( cols = Male.NoHS:Female.Graduate, names_to = 'Category', values_to = 'Total') %>%
+    #mutate Total to numeric
+    mutate( Total = as.numeric( Total ))
+
+head( eduDATA_df )
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;The data.frame has been transformed from a wide format with multiple observations in a single row, to a much longer version. Now each value from the data.frame has it's own row. However, in the process of simplifying the double header, two features of the data were combined into one column, 'Category'.  
+&nbsp;&nbsp;&nbsp;&nbsp;Our next step is to seperate the label information for Gender & Level of Education into seperate columns. We will do this using tidyr seperate() method:
+
+```{r}
+eduDATA_df <- eduDATA_df %>% separate( Category,  c("Gender", "eduLevel"))
+head( eduDATA_df )
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;Excellent! Now the data.frame is organized in a format that wil facilitate use with functions such as ggplot2 plotting methods. We can now begin to tackle the analysis questions that were mentioned in the class discussion associated with this dataset.  
+<br>  
+
+#### **Question 1**: Which region appears to have the highest proportions of HS graduates as the highest educational attainment?
+
+Visualize the data in a way that best addresses this question:
+```{r}
+#This question does not involves the 'Gender' feature, so we will aggreggate the data by Region and eduLevel to simplify our visualization
+edu_byRegion <- eduDATA_df %>% 
+    #group_by() to aggregate Region & eduLevel data
+    group_by( Region, eduLevel ) %>%
+    #find the total of Male + Female incidences
+    summarise( Total = sum( Total )) %>%
+    #mutate() to add a column with proportions
+    mutate( proportion = Total/sum( Total ))
+
+# Grouped
+ggplot(edu_byRegion, aes(fill=Region, y=proportion, x=eduLevel)) + 
+    geom_bar(position="dodge", stat="identity") +
+    ggtitle('Proportion Education Level') +
+    xlab( 'Education Level' ) +
+    ylab( 'Proportion') 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;From the figure above, we can see that the proportions per education level are comparable between each region. To address the Question: The Midwest Region has the highest proportion of people with 'High School' as their highest educational achievement.
+
+#### **Question 2**:Which education level has the highest discrepancy between Males and Females? 
+(NOTE: This question was not mentioned in the DATA607 discussion board)
+
+Visualize the data in a way that best addresses this question:
+```{r}
+#This question does not involves the 'Gender' feature, so we will aggreggate the data by Region and eduLevel to simplify our visualization
+edu_byGender <- eduDATA_df %>% 
+    #group_by() to aggregate Region & eduLevel data
+    group_by( Gender, eduLevel ) %>%
+    #find the total of Male + Female incidences
+    summarise( Total = sum( Total )) %>%
+    #mutate() to add a column with proportions
+    mutate( proportion = Total/sum( Total ))
+
+# Grouped
+ggplot(edu_byGender, aes(fill=Gender, y=proportion, x=eduLevel)) + 
+    geom_bar(position="dodge", stat="identity") +
+    ggtitle('Proportion Education Level per Gender') +
+    xlab( 'Education Level' ) +
+    ylab( 'Proportion') 
+```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;The differences between Male and Female are too slim to appreciate in this figure. Next, calculate the discrepancy:
+
+```{r}
+edu_genderDiscrep <- edu_byGender %>% 
+    pivot_wider( names_from = Gender, values_from = proportion ) %>% 
+    select( -Total ) %>% 
+    group_by( eduLevel ) %>% 
+    summarise(Female=sum(Female,na.rm=TRUE), Male = sum( Male , na.rm = TRUE)) %>%
+    mutate( discrepancy_Percent = abs( Female-Male)*100)
+
+edu_genderDiscrep
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;Again, the discrepancies are very slim, but from the output of our calculations, we can see that the largest discrepancy between Male & Female proportions is found for the Bachelors education level. By looking at the bar plot above, we can see that Females with bachelors have a slightly higher proportion than Males with bachelors. However, larger discrepancies might be found between the genders if we are to look at the data by region.
+
+
