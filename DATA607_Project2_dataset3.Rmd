@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 <div class = "col-md-6">
 <br><br><font size="3">   
 
-## Elongating a Dataset with dplyr & tidyr
+## Elongating a Dataset using methods from dplyr & tidyr
 
 ### Setting the environment
 These are the R libraries we will need for this demo:
@@ -173,4 +173,10 @@ edu_genderDiscrep
 
 &nbsp;&nbsp;&nbsp;&nbsp;Again, the discrepancies are very slim, but from the output of our calculations, we can see that the largest discrepancy between Male & Female proportions is found for the Bachelors education level. By looking at the bar plot above, we can see that Females with bachelors have a slightly higher proportion than Males with bachelors. However, larger discrepancies might be found between the genders if we are to look at the data by region.
 
+### In Closing  
 
+&nbsp;&nbsp;&nbsp;&nbsp;This demo used a small .csv file to demonstrate the importance tidying datasets. The original format of the data is very easy on human eyes: it can be scanned for the gist with ease. However, the wide format does not facilitate visualization. dplyr and tidyr provide methods to reshape data into a format that helps downstream analysis.
+<br><br>  
+
+</div>
+</div>
