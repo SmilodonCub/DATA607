@@ -316,3 +316,38 @@ numerical attributes may have vastly differetn ranges and unless they are scaled
 **curse of dimensionality** since all of the attributes contribute to the distance calculations, instance similarity can be confused and misled by the presence of too many irrelevant attributes.
 
 **feature selection** the judicious determination of features that should be included in the data mining model.
+
+
+### Chapter 7 
+### Decision Analytic Thinking: What is a Good Model?
+Connecting the results of mining data back to the goal of the undertaking.
+Thinking deeply about the needs of the application.
+
+Evaluating Classifiers.
+**Classifier Accuracy** = Num Correct/Total = 1-errorRate general measure of classifier performance.
+**Confusion Matrix** the confusion matrix separates out the decisions made by the classifier, making explicit how one class is being confused for another. The main diagonal contains the counts of the correct decisions. The errors of the classifier are the false positives and false negatives.
+
+Unbalanced class distributions
+How much do we care about Type1/Type2 Errors?
+
+**Expected Value** : The weighted average of the values of the different possible outcomes where the weight given to each value is it's probability of occurrence
+EV = p(0)*v(0) + p(1)*v(1) + p(2)*v(2).....
+**Cost & Benefit**
+probabilities can be estimated form the data, the costs & benefits often cannot.
+Givena matrix of cost and benefits and a matrix of probabilities of the outcomes, get the dot product to find the total expected profit.
+
+p(x,y)= p(y)*p(x|y)
+Expected Profit = p(p)*[p(Y|p)*p(Y,p) + p(N|p)*c(N,p)] + p(n)*[p(N|n)*b(N,n)+p(Y|n)*c(Y,n)]
+
+make sure that signs are consistent. don't double count (putting a benefit n one cell and a negative cost for the same thing in the other)
+
+**F-measure** 2*(precision*recall)/(precision + recall)
+**precision** TP/(TP + FP) = accuracy/cases predicted to be positive
+**Sensitivity** TN/(TN + FP) = True negative rate = 1-False positive rate
+**Specificity** TP/(TP + FN) = True positive rate
+
+it is important to consider carefully what would be a reasonable baselie against whih to compare model performance
+
+### Evaluation & Baseline performance
+**Majority Classifier** a naie classifier that always chooses the majority class of the training dataset.
+**Accuracy** (TP + TN)/(P + N)
