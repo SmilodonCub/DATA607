@@ -1,0 +1,82 @@
+---
+title: "DATA607_Assignment5.Rmd"
+author: "Bonnie Cooper"
+date: "3/14/2020"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Unstructured Data
+
+
+### Scraping Product Information from Amazon
+
+```{r, message=FALSE}
+library( rvest )
+library( dplyr )
+library( tidyr )
+library( stringr )
+```
+
+
+```{r}
+MIT_Stem <- 'https://mitpress.mit.edu/books/'
+bookTitles <- c( 'The Computational Brain', 'Visual Population Codes', 'Computational Modeling Methods' )
+MIT_STRext <- c( 'computational-brain-25th-anniversary-edition', 'visual-population-codes', 'computational-modeling-methods-neuroscientists')
+productINFO <- data.frame( matrix( nrow=3, ncol=6 ) )
+colnames( productINFO ) <- c( 'Title', 'Authors', 'Series', 'Summary', 'Date', 'Price')
+rownames( productINFO ) <- bookTitles
+productINFO
+```
+
+
+```{r, warning=FALSE, error=FALSE}
+for (abook in seq(1,length(bookTitles))){
+    url <- paste0( MIT_Stem, MIT_STRext[ abook ])
+    print( url )
+    doc <- read_html( url )
+    
+    productINFO$Title[abook] <- html_nodes(doc, ".book__title") %>%  
+        html_text() %>% gsub("\n", "", .) %>% trimws()     
+    productINFO$Authors[abook] <- html_nodes(doc, ".book__authors") %>%  
+        html_text() %>% gsub("\n", "", .) %>% trimws()
+    productINFO$Series[abook] <- html_nodes(doc, ".book__series") %>%  
+        html_text() %>% gsub("\n", "", .) %>% trimws()
+    productINFO$Summary[abook] <- html_nodes(doc, ".book__blurb") %>%  
+        html_text() %>% gsub("\n", "", .) %>% trimws()
+    productINFO$Date[abook] <- html_node(doc, "div time") %>% 
+        html_text() %>% gsub("\n", "", .) %>% trimws()
+    productINFO$Price[abook] <- html_node(doc, ".pricing-item__price") %>%
+        html_text() %>% gsub("\n", "", .) %>% trimws()
+
+}
+productINFO
+```
+
+```{r}
+#format the Date & Price features
+#format date
+productINFO$Date <- as.Date(paste('01', productINFO$Date), format='%d %B %Y')
+#format Price
+productINFO$Price <- productINFO$Price %>% str_match_all("^[$0-9.]+")
+productINFO$Price <- as.numeric(gsub("[$]","", productINFO$Price))
+productINFO
+```
+
+### Formatting & Saving Unstructured Data
+
+#### as .html
+
+#### as .xml 
+
+#### as .json
+
+### Access & Load the three files as R data.frames
+
+### Conclusions
+
+### References  
+
+1. [Scraping HTML Text](https://bradleyboehmke.github.io/2015/12/scraping-html-text.html)
+2. [SelectorGadget](https://selectorgadget.com/)
