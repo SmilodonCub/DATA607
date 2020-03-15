@@ -17,6 +17,11 @@ library( rvest )
 library( dplyr )
 library( tidyr )
 library( stringr )
+library( htmlTable )
+library( xtable )
+library( kulife )
+library(jsonlite)
+library( rjson )
 ```
 
 
@@ -61,16 +66,31 @@ productINFO$Date <- as.Date(paste('01', productINFO$Date), format='%d %B %Y')
 #format Price
 productINFO$Price <- productINFO$Price %>% str_match_all("^[$0-9.]+")
 productINFO$Price <- as.numeric(gsub("[$]","", productINFO$Price))
+#also, it seems that the 'Series' feature is redundant (all values are the same). We will remove it
+productINFO <- productINFO %>% select( -Series )
 productINFO
 ```
 
 ### Formatting & Saving Unstructured Data
 
 #### as .html
+```{r}
+out_table_x <- xtable( productINFO )
+print(out_table_x, type='html', file="./htmlDATA.html")
+```
 
 #### as .xml 
+```{r, message=FALSE}
+write.xml( productINFO, file="./xmlDATA.xml")
+```
 
 #### as .json
+```{r}
+jsonDATA <- toJSON( productINFO )
+cat( jsonDATA )
+write( jsonDATA, 'jsonDATA.json')
+```
+
 
 ### Access & Load the three files as R data.frames
 
