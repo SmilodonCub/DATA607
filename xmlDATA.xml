@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<document>
+  <row>
+    <Title>The Computational Brain, 25th Anniversary Edition</Title>
+    <Authors>By Patricia S. Churchland and  Terrence J. Sejnowski</Authors>
+    <Summary>An anniversary edition of the classic work that influenced a generation of neuroscientists and cognitive neuroscientists.</Summary>
+    <Date>17106</Date>
+    <Price>45</Price>
+  </row>
+  <row>
+    <Title>Visual Population Codes</Title>
+    <Authors>Edited by Nikolaus Kriegeskorte and  Gabriel Kreiman</Authors>
+    <Summary>How visual content is represented in neuronal population codes and how to analyze such codes with multivariate techniques.</Summary>
+    <Date>15248</Date>
+    <Price>19.75</Price>
+  </row>
+  <row>
+    <Title>Computational Modeling Methods for Neuroscientists</Title>
+    <Authors>Edited by Erik De Schutter</Authors>
+    <Summary>A guide to computational modeling methods in neuroscience, covering a range of modeling scales from molecular reactions to large neural networks.</Summary>
+    <Date>14488</Date>
+    <Price>19.75</Price>
+  </row>
+</document>
