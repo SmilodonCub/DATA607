@@ -2,9 +2,9 @@
 title: "Alphabet Soup: HTML, XML & JSON in R"
 author: "Bonnie Cooper"
 output:
-  html_document:
-    highlight: tango
-    theme: readable
+  prettydoc::html_pretty:
+    theme: hpstr
+    
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -244,7 +244,7 @@ all_equal( xml_df, json_df ) #this is redundant, but for completion's sake....
 <font size="3">  
 
 ### About the books....
-I'm an MIT Press fangirl! They always have a booth at the annual SfN meeting [(The super bowl of Neuroscience)](https://www.sfn.org/meetings/neuroscience-2020) & I flock over to stuff my bag with wholesale priced inspiration. If I could, I would sing their praise from high on a mountain. The examples used in this demo are several MIT Press books of the many that I have pawed through over the years.
+&nbsp;&nbsp;&nbsp;&nbsp;I'm an MIT Press fangirl! They always have a booth at the annual SfN meeting [(The super bowl of Neuroscience)](https://www.sfn.org/meetings/neuroscience-2020) & I flock over to stuff my bag with wholesale priced inspiration. If I could, I would sing their praise from high on a mountain. The examples used in this demo are several MIT Press books of the many that I have pawed through over the years.
 
 </div>
   
