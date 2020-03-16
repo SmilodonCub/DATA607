@@ -1,16 +1,46 @@
 ---
-title: "DATA607_Assignment5.Rmd"
+title: "Alphabet Soup: HTML, XML & JSON in R"
 author: "Bonnie Cooper"
-date: "3/14/2020"
-output: html_document
+output:
+  html_document:
+    highlight: tango
+    theme: readable
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-## Unstructured Data
+<br>
+
+***
+<br>
+
+### Reading & writing standard formats for web data in R: HTML, XML & JSON
+<br>  
+
+***
+
+<div class = "row">  
+
+<div class = "col-md-6">  
+
+<font size="3">   
+
+### Table of Contents  
+
+&nbsp;&nbsp;&nbsp;&nbsp;This demo will focus on reading and writing web data formats. However, we will start by scraping data on several books from the [MIT Press](https://mitpress.mit.edu/) website. The demo will proceed as follows:  
+
+* Webscraping datapoints from 3 MIT Press books to an R data.frame
+* Writing the R data.frame to .html, .xml & .json files 
+* Reading .html, .xml & .json files to R data.frames
+* Comparing data.frames from the different formats. OUR GOAL: the three data.frames should be the same.
+* Conclusions
 
 
-### Scraping Product Information from Amazon
+</div>
+  
+<div class = "col-md-6">
+
+### R Libraries used in this demo: 
 
 ```{r, message=FALSE}
 library( rvest )
@@ -20,28 +50,54 @@ library( stringr )
 library( htmlTable )
 library( xtable )
 library( kulife )
-library(jsonlite)
 library( rjson )
+library( jsonlite )
+library( XML )
+library( RCurl )
 ```
 
+</div>  
+
+
+<div class = "col-md-12">
+
+***
+
+### Webscraping in R
+
+&nbsp;&nbsp;&nbsp;&nbsp;Here we will scrape information from 3 books published by [MIT Press](https://mitpress.mit.edu/). MIT Press is the university press for the Massachusetts Institute of Technology and publishes many books and journals at the forefront of interdisciplinary studies in science, tech, art, social studies and design.  
+
+&nbsp;&nbsp;&nbsp;&nbsp;We will start by initializing an R data.frame to hold the data points we will be scraping...
 
 ```{r}
+#string pattern for MIT product pages
 MIT_Stem <- 'https://mitpress.mit.edu/books/'
+#ttiles for each book
 bookTitles <- c( 'The Computational Brain', 'Visual Population Codes', 'Computational Modeling Methods' )
+#string extention for each book
 MIT_STRext <- c( 'computational-brain-25th-anniversary-edition', 'visual-population-codes', 'computational-modeling-methods-neuroscientists')
+#initialize a R data.frame
 productINFO <- data.frame( matrix( nrow=3, ncol=6 ) )
+#give column names for each feature we will scrape
 colnames( productINFO ) <- c( 'Title', 'Authors', 'Series', 'Summary', 'Date', 'Price')
-rownames( productINFO ) <- bookTitles
+#row names: 1 for each book we will scrape
+#rownames( productINFO ) <- bookTitles
+#display the result
 productINFO
 ```
+<br>
 
+&nbsp;&nbsp;&nbsp;&nbsp;Now we will use a for loop to read each url with html_read() and extract specific information patterns with html_nodes(). Specific nodes are referenced in each call to html_nodes; the strings that specify each piece were found using the [SelectorGadget](https://selectorgadget.com/) extenson for Chrome. For more information, please see this [excellent tutorial on Scraping HTML Text](https://bradleyboehmke.github.io/2015/12/scraping-html-text.html). Next, we will pipe the information & use dplyr & tidyverse methods to clean and format the datapoints. Each feature is passed to the appropriate column in the R data.frame we initialized in the previous code window. 
+<br>
 
 ```{r, warning=FALSE, error=FALSE}
+#for loop to iterate over each url the same scrape
 for (abook in seq(1,length(bookTitles))){
+    #concatenate the full url = MIT_stem + book extension
     url <- paste0( MIT_Stem, MIT_STRext[ abook ])
-    print( url )
+    #read_html() to read the url's html into R
     doc <- read_html( url )
-    
+    #html_nodes() to access specific html 
     productINFO$Title[abook] <- html_nodes(doc, ".book__title") %>%  
         html_text() %>% gsub("\n", "", .) %>% trimws()     
     productINFO$Authors[abook] <- html_nodes(doc, ".book__authors") %>%  
@@ -50,53 +106,166 @@ for (abook in seq(1,length(bookTitles))){
         html_text() %>% gsub("\n", "", .) %>% trimws()
     productINFO$Summary[abook] <- html_nodes(doc, ".book__blurb") %>%  
         html_text() %>% gsub("\n", "", .) %>% trimws()
-    productINFO$Date[abook] <- html_node(doc, "div time") %>% 
+    productINFO$Date[abook] <- html_nodes(doc, "div time") %>% 
         html_text() %>% gsub("\n", "", .) %>% trimws()
-    productINFO$Price[abook] <- html_node(doc, ".pricing-item__price") %>%
+    productINFO$Price[abook] <- html_nodes(doc, ".pricing-item__price") %>%
         html_text() %>% gsub("\n", "", .) %>% trimws()
 
 }
-productINFO
 ```
+<br>  
+
+&nbsp;&nbsp;&nbsp;&nbsp;Some further cleaning of the data is necessary....
+<br>
 
 ```{r}
-#format the Date & Price features
-#format date
-productINFO$Date <- as.Date(paste('01', productINFO$Date), format='%d %B %Y')
 #format Price
 productINFO$Price <- productINFO$Price %>% str_match_all("^[$0-9.]+")
 productINFO$Price <- as.numeric(gsub("[$]","", productINFO$Price))
 #also, it seems that the 'Series' feature is redundant (all values are the same). We will remove it
 productINFO <- productINFO %>% select( -Series )
-productINFO
 ```
+<br> 
 
-### Formatting & Saving Unstructured Data
+***
 
-#### as .html
+### Writing the R data.frame to .html, .xml & .json files
+&nbsp;&nbsp;&nbsp;&nbsp;Let's display the R data.frame as an html table:
+```{r}
+htmlTable(productINFO)
+```
+<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;Great!, what we would like to do now is write and export the data as .html, .xml & .json output files. Each file will contain the same information. However, it will written in one of three different outputs:
+<br><br>
+
+#### write .html
+&nbsp;&nbsp;&nbsp;&nbsp;xtable() function from the xtable library is used to format the data.frame to .html format.
 ```{r}
 out_table_x <- xtable( productINFO )
 print(out_table_x, type='html', file="./htmlDATA.html")
 ```
+<br>
 
-#### as .xml 
+#### write .xml 
+&nbsp;&nbsp;&nbsp;&nbsp;write.xml() function from the kulife library is used to format the data.frame to .xml format.
 ```{r, message=FALSE}
 write.xml( productINFO, file="./xmlDATA.xml")
 ```
+<br>
 
-#### as .json
+#### write .json
+&nbsp;&nbsp;&nbsp;&nbsp;toJSON() from the rjson library & write() functions are used to format the data.frame to .json format.
 ```{r}
 jsonDATA <- toJSON( productINFO )
-cat( jsonDATA )
 write( jsonDATA, 'jsonDATA.json')
 ```
+<br>
 
+***
 
-### Access & Load the three files as R data.frames
+### Reading .html, .xml & .json files to R data.frames
+&nbsp;&nbsp;&nbsp;&nbsp;In the previous code blocks, we wrote & exported our R data.frame in three different formats. Next we will reverse the process and read .html, .xml & .json files into R as data.frames.
+&nbsp;&nbsp;&nbsp;&nbsp;To do this, we need to access the different formats. For convenience of this demo, the output files have been uploaded to the author's github account for easy access:
+
+**Uploaded Data Files**  
+
+1. [HTML data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/htmlDATA.html)
+2. [XML data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/xmlDATA.xml)
+3. [JSON data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/jsonDATA.json)
+
+&nbsp;&nbsp;&nbsp;&nbsp;Next we will access & read each file as an R data.frame...
+<br><br>  
+
+#### read .html
+&nbsp;&nbsp;&nbsp;&nbsp;Here we pipe the URL for the html file to the functions read_html() and html_table() from the rvest library and then pipe to as.data.frame() to convert to an R data.frame. This process creates a feature, 'Var.1' holding the row numbers. we use dplyr select() to negate this column.
+```{r}
+htmlURL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/htmlDATA.html'
+html_df <- htmlURL %>% read_html( ) %>% html_table() %>% as.data.frame() %>% select( -Var.1)
+```
+<br>  
+
+#### read .xml
+&nbsp;&nbsp;&nbsp;&nbsp;getURL() from the rcurl library is used here to load the data while xmlParse() and xmlToDataFrame() from the XML library are used to parse and convert the data to an R data.frame. Also, recast the 'Price' feature with as.numeric()
+```{r}
+xmlURL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/xmlDATA.xml'
+xml_doc <- xmlParse( getURL( xmlURL ) )
+xml_df <- xmlToDataFrame( xml_doc, stringsAsFactors = F )
+xml_df$Price <- as.numeric( xml_df$Price )
+``` 
+<br>  
+
+#### read .json
+&nbsp;&nbsp;&nbsp;&nbsp;read_json() from the jsonlite library is used to format the .json file to an R data.frame and as.data.frame() to recast to treat features as strings not factors.
+```{r}
+jsonURL <-'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/jsonDATA.json'
+json_df <- as.data.frame( read_json( jsonURL, simplifyVector =TRUE), stringsAsFactors =F )
+```
+<br><br>
+
+***
+
+### Comparing data.frames from the different formats
+&nbsp;&nbsp;&nbsp;&nbsp;Wonderful!, we now have three R data.frames that we derived from .html, .xml & .json source material. Technically, they should all be identical because we wrote the source files with the content of the same data.frame. But are they?......
+
+&nbsp;&nbsp;&nbsp;&nbsp;We will use the dplyr function all_equal() to evaluate whether the data.frames are truly identical.
+```{r}
+all_equal( html_df, xml_df )
+all_equal( html_df, json_df )
+all_equal( xml_df, json_df ) #this is redundant, but for completion's sake....
+```
+<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;That's fantastic!, we can see that all three comparisons with all_equal() return 'TRUE' therefore, we can rest assured that the data.frames are equivalent to each other.
+<br>  
+
+***
+<br>
 
 ### Conclusions
 
+**In this demo we:**   
+
+* scraped information from three books from the web
+* formatted several key descriptors from the webpages html to an R data.frame
+* exported the data.frame into three different formats (.html, .xml & .json)
+* used the files generated in our code as source to upload as R data.frames
+* demonstrated that the data.frames are equivalent
+
+&nbsp;&nbsp;&nbsp;&nbsp;Reading web data in different formats required subtle manipulations to ensure proper format; there were no magic bullet functions that could handle writing to a data.frame flying solo. For example, writing .html data to an R data.frame required piping through multiple functions and writing .xml to a data.frame required recasting numeric data. However, we were able to accomplish our goal of building three equivalent R data.frames from different formats. This was facilitated by using multiple libraries to make out life easier and our code easier to read.
+<br><br>
+
+***
+<br>
+<div class = "row">  
+
+<div class = "col-md-6">  
+
+<font size="3">  
+
+### About the books....
+I'm an MIT Press fangirl! They always have a booth at the annual SfN meeting [(The super bowl of Neuroscience)](https://www.sfn.org/meetings/neuroscience-2020) & I flock over to stuff my bag with wholesale priced inspiration. If I could, I would sing their praise from high on a mountain. The examples used in this demo are several MIT Press books of the many that I have pawed through over the years.
+
+</div>
+  
+<div class = "col-md-6">
+
+![](https://i.imgur.com/DPGJxhR.png)
+
+</div>  
+
+
+<div class = "col-md-12">
+
+<br>
+
+***
+<br>  
+
 ### References  
 
-1. [Scraping HTML Text](https://bradleyboehmke.github.io/2015/12/scraping-html-text.html)
-2. [SelectorGadget](https://selectorgadget.com/)
+1. [Scraping HTML Text](https://bradleyboehmke.github.io/2015/12/scraping-html-text.html)  
+2. [SelectorGadget](https://selectorgadget.com/)  
+3. [MIT Press](https://mitpress.mit.edu/)  
+4. [R Data Import Tutorial](https://www.datacamp.com/community/tutorials/r-data-import-tutorial)
+<br><br><br>
