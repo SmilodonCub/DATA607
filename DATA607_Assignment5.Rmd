@@ -166,13 +166,7 @@ write( jsonDATA, 'jsonDATA.json')
 
 ### Reading .html, .xml & .json files to R data.frames
 &nbsp;&nbsp;&nbsp;&nbsp;In the previous code blocks, we wrote & exported our R data.frame in three different formats. Next we will reverse the process and read .html, .xml & .json files into R as data.frames.
-&nbsp;&nbsp;&nbsp;&nbsp;To do this, we need to access the different formats. For convenience of this demo, the output files have been uploaded to the author's github account for easy access:
-
-**Uploaded Data Files**  
-
-1. [HTML data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/htmlDATA.html)
-2. [XML data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/xmlDATA.xml)
-3. [JSON data](https://raw.githubusercontent.com/SmilodonCub/DATA607/master/jsonDATA.json)
+&nbsp;&nbsp;&nbsp;&nbsp;To do this, we need to access the different formats. For convenience of this demo, the output files have been uploaded to the author's github account for easy access.
 
 &nbsp;&nbsp;&nbsp;&nbsp;Next we will access & read each file as an R data.frame...
 <br><br>  
