@@ -1,0 +1,146 @@
+---
+title: "Text Mining Reddit Comments"
+author: "Bonnie Cooper"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## RedditExtractoR to query reddit threads and extract relevant comments
+
+RedditExtractoR is a collection of tools for extracting unstructured data from the social media website Reddit. In this demo we will use RedditExtractoR functions to extract text comment data from relevant threads. We will then use dplyr and tidyr methods to clean and tidy the data.
+
+**Goal** Query reddit for threads relevant to 'Data science skills', collect and mine text for insights, chiefly: "What are the most valued data science skills 
+
+```{r, message=FALSE}
+library( RedditExtractoR )
+library( dplyr )
+library( tidyr )
+library( tm )
+library( SnowballC )
+library( wordcloud2 )
+library( RColorBrewer )
+```
+
+### Query for relevant URLs  
+
+get_reddit() function was used in multiple queries withing the subreddit r/datascience to find relevant thread & comment results for such terms as 'data science skills', 'data scince tools', 'learning data science', 'data tools' etc.  
+
+This is an example query:
+```{r, echo=T, results='hide', warning=F}
+closeAllConnections()
+URLs <- get_reddit(
+  search_terms   = "data science skills",
+  cn_threshold = 5,
+  subreddit = 'datascience'
+)
+```
+
+The result of a query is a data.frame with 18 features
+```{r}
+colnames( URLs )
+```
+
+
+### URL data.frame
+Mulitiple querries were performed on permutations of data + science + skills + tools + learning. The resulting data.frames were combined with the rbind() function and exported as a .csv file. The file was uploaded to the author's github to be accessed here:
+
+```{r}
+rTexts <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/allTexts.csv'
+rTexts_df <- read.csv( rTexts, stringsAsFactors = F)
+dim( rTexts_df )
+```
+
+
+### Collecting More Comments
+
+Comments were also collected with other redditExtractoR methods.
+thread URLs were collected using the reddit_urls using the same search criteria that was used with get_reddit()
+
+The data.frames from multiple reddit_URLs() queries were collated with rbind()
+Next, the a for loop was used to scrape the comments from each URL with the redditExractoR function reddit_content():
+
+```{r, eval=FALSE}
+#Here is an example query with reddit_urls():
+closeAllConnections()
+URLs <- reddit_urls(
+  search_terms   = "data science skills",
+  cn_threshold = 1,
+  subreddit = 'datascience'
+)
+#This code was used to collect comments
+#I had a lot of difficulty running this as connections kept timing out! Could not find a work around without wasting more time, so i moved on
+numComments <- sum( rURLs_df$num_comments )
+allComments <- data.frame( matrix( 0, nrow = numComments, ncol = 1 ) )
+numURLs <- length( rURLs_df$URL )
+IDX <- 1
+Secs <- 3
+for (aURL in seq(1,numURLs)){
+  urlContent <- reddit_content(rURLs_df$URL[aURL], wait_time = 2)
+  Sys.sleep(Secs)
+  closeAllConnections()
+  gc()
+  numComments_thisURL <- length( urlContent$comment )
+  print( numComments_thisURL )
+  if (numComments_thisURL>0){
+    allComments[ IDX:(IDX + numComments_thisURL -1),] <-
+    urlContent$comment
+  }
+  IDX <- IDX + numComments_thisURL
+  print(IDX)
+}
+```
+
+The comments that resulted from this approach were exported as a .csv and uploaded to gihub to be accessed here:
+```{r}
+url1 <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/redditComments.csv'
+moreComments_df <- read.csv( url1, stringsAsFactors = F) %>% 
+  select(-X ) %>%
+  rename( comment = matrix.0..nrow...numComments..ncol...1.)
+dim( moreComments_df )
+```
+
+
+### Combining Comments & removing duplicates
+
+Multiple queries with similar search terms predictably yielded overlapping results. Therefore, we will create a new data.frme with just the 'comment' feature and remove the duplicates
+
+```{r}
+#combine comments from different redditExtractoR methods
+allComments_df <- rTexts_df %>% select( comment ) 
+allComments_df <- rbind( allComments_df, moreComments_df)
+dim( allComments_df )
+#remove duplicate comments
+allComments_df <- allComments_df %>% unique()
+dim( allComments_df )
+```
+
+```{r}
+commentCorpus <- Corpus( VectorSource( allComments_df ) )
+commentCorpus <- commentCorpus %>%
+  tm_map(removePunctuation) %>% ##eliminate punctuation
+  tm_map(removeNumbers) %>% #no numbers
+  tm_map(stripWhitespace) %>%#white spaces
+  tm_map(tolower)%>% ##make all words lowercase
+  tm_map(removeWords, stopwords("english")) %>%
+  tm_map(stemDocument)
+```
+
+```{r}
+getTransformations()
+commentCorpus <-as.matrix(TermDocumentMatrix( commentCorpus ))
+commentCorpus_wordFreq <-sort(rowSums(commentCorpus), decreasing=TRUE)
+
+```
+
+```{r}
+set.seed(32) #be sure to set the seed if you want to reproduce the same again
+
+wordcloud(words=names(commentCorpus_wordFreq), freq=commentCorpus_wordFreq, scale=c(3,.5),max.words = 100, random.order = TRUE, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+```
+
