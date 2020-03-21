@@ -136,9 +136,9 @@ commentCorpus <- commentCorpus %>%
 
 commentCorpus_mat <-as.matrix(TermDocumentMatrix( commentCorpus ))
 commentCorpus_wordFreq <-sort(rowSums(commentCorpus_mat), decreasing=TRUE)
-top20 <- commentCorpus_wordFreq[1:20]
+top15 <- commentCorpus_wordFreq[1:15]
 
-aplot <- as.data.frame( melt( top20 ) )
+aplot <- as.data.frame( melt( top15 ) )
 aplot$word <- dimnames( aplot )[[1]]
 aplot$word <- factor(aplot$word,
                       levels=aplot$word[order(aplot$value,
@@ -203,22 +203,71 @@ nouns$lemma <- factor(nouns$lemma,
                          levels = rev(nouns$lemma))
 #barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
          #main = "Most occurring nouns", xlab = "Freq")
-
-fig <- ggplot(head(nouns,20), aes(x=lemma, y=value)) + 
+png('redditHisto.png')
+fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
-  xlab("Word in Corpus") + 
+  xlab("Word") + 
   ylab("Count") +
   coord_flip()
 print(fig)
-
+dev.off()
 ```
 
 
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
+#png('redditWordcloud.png')
 wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+#dev.off()
 ```
 
 
+### Indeed Corpus
+
+```{r}
+URL <- 'https://raw.githubusercontent.com/dmoste/DATA607/master/Project%203/corpus.csv'
+indeedCorpus_df <- read.csv( URL, stringsAsFactors = F) %>%
+  rename( word = X, count = x )
+head( indeedCorpus_df )
+
+
+indeed1000_processedWords <- udpipe_annotate(udmodel_english, 
+                                          indeedCorpus_df$word[1:1000] )
+indeed1000_NLP <- data.frame(indeed1000_processedWords)
+head( indeed1000_NLP )
+
+#remove duplicated word entries (for ambiguous text)
+indeed1000_NLP <- indeed1000_NLP[ !duplicated( indeed1000_NLP$doc_id ), ]
+#merge two dataframes
+indeed1000_NLP$value <- indeedCorpus_df$count[1:1000]
+#Most occuring nouns
+nouns <- subset(indeed1000_NLP, upos %in% c("NOUN")) 
+#to check if i'm missing anything interesting:
+#verbs <- subset(top1000_NLP, upos %in% c("VERB")) 
+#adjs <- subset(top1000_NLP, upos %in% c("ADJ")) 
+nouns <- nouns %>% group_by( lemma ) %>% 
+  summarise( value = sum( value )) %>%
+  arrange( desc( value ) )
+nouns$lemma <- factor(nouns$lemma, 
+                         levels = rev(nouns$lemma))
+#barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
+         #main = "Most occurring nouns", xlab = "Freq")
+#png('udpipeIndeedHisto.png')
+fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
+  geom_bar(stat="identity") + 
+  xlab("Word") + 
+  ylab("Count") +
+  coord_flip()
+print(fig)
+#dev.off()
+```
+
+```{r}
+set.seed(36) #be sure to set the seed if you want to reproduce the same again
+
+#png('udpipeIndeedWordcloud.png')
+wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+#dev.off()
+```
 
