@@ -23,28 +23,30 @@ library( dplyr )
 library( tidyr )
 library( tm )
 library( SnowballC )
-library( wordcloud2 )
+library( wordcloud )
 library( RColorBrewer )
+library( udpipe )
+library( reshape2 )
+library( ggplot2 )
+library( lattice )
 ```
+
 
 ### Query for relevant URLs  
 
 get_reddit() function was used in multiple queries withing the subreddit r/datascience to find relevant thread & comment results for such terms as 'data science skills', 'data scince tools', 'learning data science', 'data tools' etc.  
 
-This is an example query:
-```{r, echo=T, results='hide', warning=F}
-closeAllConnections()
-URLs <- get_reddit(
-  search_terms   = "data science skills",
-  cn_threshold = 5,
-  subreddit = 'datascience'
-)
-```
+This is an example query:  
+<code>
+closeAllConnections()  
+URLs <- get_reddit(  
+  search_terms   = "data science skills",  
+  cn_threshold = 5,  
+  subreddit = 'datascience'  
+)  
+</code>
 
 The result of a query is a data.frame with 18 features
-```{r}
-colnames( URLs )
-```
 
 
 ### URL data.frame
@@ -65,36 +67,36 @@ thread URLs were collected using the reddit_urls using the same search criteria 
 The data.frames from multiple reddit_URLs() queries were collated with rbind()
 Next, the a for loop was used to scrape the comments from each URL with the redditExractoR function reddit_content():
 
-```{r, eval=FALSE}
-#Here is an example query with reddit_urls():
-closeAllConnections()
-URLs <- reddit_urls(
-  search_terms   = "data science skills",
-  cn_threshold = 1,
-  subreddit = 'datascience'
-)
-#This code was used to collect comments
-#I had a lot of difficulty running this as connections kept timing out! Could not find a work around without wasting more time, so i moved on
-numComments <- sum( rURLs_df$num_comments )
-allComments <- data.frame( matrix( 0, nrow = numComments, ncol = 1 ) )
-numURLs <- length( rURLs_df$URL )
-IDX <- 1
-Secs <- 3
-for (aURL in seq(1,numURLs)){
-  urlContent <- reddit_content(rURLs_df$URL[aURL], wait_time = 2)
-  Sys.sleep(Secs)
-  closeAllConnections()
-  gc()
-  numComments_thisURL <- length( urlContent$comment )
-  print( numComments_thisURL )
-  if (numComments_thisURL>0){
-    allComments[ IDX:(IDX + numComments_thisURL -1),] <-
-    urlContent$comment
-  }
-  IDX <- IDX + numComments_thisURL
-  print(IDX)
-}
-```
+<code>
+#Here is an example query with reddit_urls():  
+closeAllConnections()  
+URLs <- reddit_urls(  
+  search_terms   = "data science skills",  
+  cn_threshold = 1,  
+  subreddit = 'datascience'  
+)  
+#This code was used to collect comments  
+#I had a lot of difficulty running this as connections kept timing out!   Could not find a work around without wasting more time, so i moved on  
+numComments <- sum( rURLs_df$num_comments )  
+allComments <- data.frame( matrix( 0, nrow = numComments, ncol = 1 ) )  
+numURLs <- length( rURLs_df$URL )  
+IDX <- 1  
+Secs <- 3  
+for (aURL in seq(1,numURLs)){  
+  urlContent <- reddit_content(rURLs_df$URL[aURL], wait_time = 2)  
+  Sys.sleep(Secs)  
+  closeAllConnections()  
+  gc()  
+  numComments_thisURL <- length( urlContent$comment )  
+  print( numComments_thisURL )  
+  if (numComments_thisURL>0){  
+    allComments[ IDX:(IDX + numComments_thisURL -1),] <-  
+    urlContent$comment  
+  }  
+  IDX <- IDX + numComments_thisURL  
+  print(IDX)  
+}  
+</code>
 
 The comments that resulted from this approach were exported as a .csv and uploaded to gihub to be accessed here:
 ```{r}
@@ -120,27 +122,103 @@ allComments_df <- allComments_df %>% unique()
 dim( allComments_df )
 ```
 
-```{r}
+```{r, results='hide', warning=F}
 commentCorpus <- Corpus( VectorSource( allComments_df ) )
 commentCorpus <- commentCorpus %>%
   tm_map(removePunctuation) %>% ##eliminate punctuation
   tm_map(removeNumbers) %>% #no numbers
   tm_map(stripWhitespace) %>%#white spaces
   tm_map(tolower)%>% ##make all words lowercase
-  tm_map(removeWords, stopwords("english")) %>%
-  tm_map(stemDocument)
+  tm_map(removeWords, stopwords("en")) 
 ```
 
 ```{r}
-getTransformations()
-commentCorpus <-as.matrix(TermDocumentMatrix( commentCorpus ))
-commentCorpus_wordFreq <-sort(rowSums(commentCorpus), decreasing=TRUE)
+
+commentCorpus_mat <-as.matrix(TermDocumentMatrix( commentCorpus ))
+commentCorpus_wordFreq <-sort(rowSums(commentCorpus_mat), decreasing=TRUE)
+top20 <- commentCorpus_wordFreq[1:20]
+
+aplot <- as.data.frame( melt( top20 ) )
+aplot$word <- dimnames( aplot )[[1]]
+aplot$word <- factor(aplot$word,
+                      levels=aplot$word[order(aplot$value,
+                                               decreasing=F)])
+
+fig <- ggplot(aplot, aes(x=word, y=value)) + 
+  geom_bar(stat="identity") + 
+  xlab("Word in Corpus") + 
+  ylab("Count") +
+  coord_flip()
+print(fig)
+
+
+top1000 <- commentCorpus_wordFreq[1:1000]
+top1000_words <- as.data.frame( melt( top1000 ) )
+top1000_words$word <- dimnames( top1000_words )[[1]]
+top1000_words$word <- factor(top1000_words$word,
+                    levels=top1000_words$word[order(top1000_words$value,
+                                               decreasing=T)])
+
 
 ```
 
 ```{r}
 set.seed(32) #be sure to set the seed if you want to reproduce the same again
 
-wordcloud(words=names(commentCorpus_wordFreq), freq=commentCorpus_wordFreq, scale=c(3,.5),max.words = 100, random.order = TRUE, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+wordcloud(words=names(commentCorpus_wordFreq), freq=commentCorpus_wordFreq, scale=c(3,.5),max.words = 200, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
 ```
+
+
+### Process the Comments further with the udpipe library
+Here we use the udpipe library to tag and select for words that are nouns
+
+https://towardsdatascience.com/easy-text-analysis-on-abc-news-headlines-b434e6e3b5b8
+```{r}
+model <- udpipe_download_model(language = "english")
+udmodel_english <- udpipe_load_model(file = model$file_model)
+```
+
+```{r}
+top1000_processedWords <- udpipe_annotate(udmodel_english, 
+                                          top1000_words$word )
+top1000_NLP <- data.frame(top1000_processedWords)
+head( top1000_NLP )
+```
+
+
+```{r}
+#remove duplicated word entries (for ambiguous text)
+top1000_NLP <- top1000_NLP[ !duplicated( top1000_NLP$doc_id ), ]
+#merge two dataframes
+top1000_NLP$value <- top1000_words$value
+#Most occuring nouns
+nouns <- subset(top1000_NLP, upos %in% c("NOUN")) 
+#to check if i'm missing anything interesting:
+#verbs <- subset(top1000_NLP, upos %in% c("VERB")) 
+#adjs <- subset(top1000_NLP, upos %in% c("ADJ")) 
+nouns <- nouns %>% group_by( lemma ) %>% 
+  summarise( value = sum( value )) %>%
+  arrange( desc( value ) )
+nouns$lemma <- factor(nouns$lemma, 
+                         levels = rev(nouns$lemma))
+#barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
+         #main = "Most occurring nouns", xlab = "Freq")
+
+fig <- ggplot(head(nouns,20), aes(x=lemma, y=value)) + 
+  geom_bar(stat="identity") + 
+  xlab("Word in Corpus") + 
+  ylab("Count") +
+  coord_flip()
+print(fig)
+
+```
+
+
+```{r}
+set.seed(36) #be sure to set the seed if you want to reproduce the same again
+
+wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+```
+
+
 
