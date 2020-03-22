@@ -1,5 +1,5 @@
 ---
-title: "Text mining Reddit & Indeed: Scraping and Cleaning Data"
+title: "Text mining Reddit & Indeed for the most valued Data Science skills"
 author: "Abdellah Ait, Bonnie Cooper, Gehad Gad & David Moste"
 output: 
   prettydoc::html_pretty:
@@ -14,9 +14,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-In this project we worked as a team to gather text data to address the question, **"Which are the most valued data science skills?"** Our approach involved scraping data from two very different sources: The job-listing site [Indeed](https://www.indeed.com/) and the content aggregation site [Reddit](https://www.reddit.com/). We are attempting to get two very different perspectives on valued data science skills: one from the perspective of the job market and another from relevant conversations within a subset of the data science community.  
+In this project we worked as a team to gather text data to address the question, **"Which are the most valued data science skills?"** Our approach involved scraping data from two very different sources: The job-listing site [Indeed](https://www.indeed.com/) and the content aggregation site [Reddit](https://www.reddit.com/). Our motivation is to get two very different perspectives on valued data science skills: one from the perspective of the job market and another from relevant conversations within a subset of the data science community.  
 <br>
-Here we describe the method used to scrape text data from the two sources as well as the methods used to process and clean the data.  
+Here we describe the methods used to scrape text data from the two sources, the methods used to process and clean the data, discuss our analysis approaches and present our findings.  
 <br>
 
 **Table of Contents**  
@@ -33,6 +33,13 @@ Here we describe the method used to scrape text data from the two sources as wel
 * Natural Language Processing with the udpipe library
     + processing Reddit data
     + processing Indeed data
+* Centralizing datasets in a Relational Database
+* Joint Analysis of the Normalized Data
+* Conclusions
+* Future Directions
+
+
+***
 
 ## Libraries used
 
@@ -52,8 +59,12 @@ library( lattice )
 library( rvest )
 library( tidyverse )
 library( SnowballC )
+library( RMySQL )
 ```
 <br><br>
+
+***
+<br>
 
 ## Scraping Relevent Reddit Comments with **redditExtractoR**
 
@@ -146,6 +157,9 @@ allComments_df <- allComments_df %>% unique()
 dim( allComments_df )
 ```
 <br><br>  
+
+***
+<br>
 
 ## Scraping Indeed Text Data
 A [python script](https://github.com/dmoste/DATA607/blob/master/Project%203/data_science_scrape.py) that utilizes the selenium and BeautifulSoup packages was used to collect a list of Indeed job add links for Data Science jobs.
@@ -245,6 +259,9 @@ indeed1000_words$word <- factor( indeed1000_words$word,
 ```
 <br><br>
 
+***
+<br>
+
 ## Natural Language Processing with the udpipe library
 
 Here we use the udpipe library to apply some basic Natural Language Processing on the text. We tag the words with part of speach and select for words that are nouns under the assumption that nouns their frequency of occurance will be most informative about the data science skills in the text.
@@ -342,4 +359,89 @@ wordcloud(words=nounsIndeed$lemma, freq=nounsIndeed$value, scale=c(3,.5),max.wor
 
 There are some remarkable similarities between the words in each of the data sets. In both of the histograms, we can see several words in common.
 
+<br><br>
+
+***
+<br>
+
+## Centralizing Datasets in a Relational Database
+
+The facilitate the joint analysis of Indeed and Reddit text data, both data sets were stored in a MySQL relational database. The SQL script that generates tables can be [accessed here](https://github.com/dmoste/DATA607/blob/master/Project%203/Project%203%20SQL.sql).
+<br><br>
+
+## Joint Analysis of the Normalized Data
+
+The datasets have be stored in seperate tables in a MySQL database. We will now query the data and perform an inner join of the two tables.
+
+
+To start, we establish a connection to the MySQL database:
+```{r echo = F, eval = T}
+# establish connection
+con <- dbConnect(MySQL(), user='root', password='FunLasts4Ever!', dbname='project_3', host='127.0.0.1')
+```
+```{r echo = T, eval = F}
+con <- dbConnect(MySQL(), user='root', password='TypeYourPasswordHere', dbname='project_3', host='127.0.0.1')
+```
+```{r}
+con
+```
+
+Now we prepare the data so that we can make direct comparisons between the two datasets. We will do this by querying the SQL datatables through our connection to the MySQL database, processing the data, combining data with an inner join method and tidy the data to facilitate visualization:
+```{r}
+#query the indeed1 and reddit MySQL datatables with a SELECT statement such that all of the contents are selected and cast as R data.frames
+sql <- "SELECT * FROM indeed1"
+indeed1 <- dbGetQuery(con, sql)
+sql <- "SELECT * FROM reddit"
+reddit <- dbGetQuery(con, sql)
+
+#Filter by part of speech for words that are nouns
+indeed_data <- indeed1 %>%
+  filter(upos == "NOUN")
+reddit_data <- reddit %>%
+  filter(upos == "NOUN")
+
+#Normlize the results to facilitate a direct comparison of the data.
+indeed_data$Indeed <- (indeed_data$count)/sum(indeed_data$count)
+reddit_data$Reddit <- (reddit_data$count)/sum(reddit_data$count)
+
+#Make a new data.frame that is the result of an inner join of the indeed and reddit data. This will hold all the nouns that thw two data.frames hold in commonality.
+#Then, process the joined data set to filter out low incidence cases.
+#tidy the data with the pivot_longer() function to facilitate downstream analysis & visualization.
+data_compare <- indeed_data %>%
+  inner_join(reddit_data, by = "token") %>% #join common elements
+  filter(count.x >100) %>% #filter out low incidence cases
+  filter(count.y >100) %>%
+  select(-lemma.x, -lemma.y, -upos.x, -upos.y) %>%
+  pivot_longer( #tidy the data to a long format
+    c("Reddit", "Indeed"),
+    names_to = "Database",
+    values_to = "Count"
+  )
+```
+<br>  
+
+Visualize the joint dataset
+```{r}
+ggplot(data_compare, aes(x = reorder(token, Count), y = Count,
+                          fill = Database)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(x = "Word",
+       y = "Usage",
+       fill = "Site") +
+  coord_flip()
+```
+<br><br>
+
+## Conclusions
+
+For this project, we scraped, wraggled and processed text data from both Indeed and Reddit. We believe that these sources give two different approaches to addressing which skills are the most valuable in data science. 
+
+Based on the analysis of our data, it appears that some of the most valued skills for data scientists are python, analysis, modeling, machine learning, analytics, and teamwork. These words came up frequently in every database we examined and make sense in terms of what we have learned about so far. When attempting to get a job, it looks like experience and degree are also valued (though these are not skills, per se).
+
+## Future Directions
+
+1. It would be very interesting to see how this data correlates with text data sets from other sources. Perhaps from other groups for this Project 3?...
+
+2. For our analysis, we only looked at single words. We could revisit the data with RAKE udpipe methods for phrases or word pairings (e.g. 'machine learning' or 'big data')
 <br><br><br>
