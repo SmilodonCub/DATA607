@@ -1,6 +1,6 @@
 ---
-title: "Text Mining Reddit Comments"
-author: "Bonnie Cooper"
+title: "Text mining Reddit & Indeed: Scraping and Cleaning Data"
+author: "Abdellah Ait, Bonnie Cooper, Gehad Gad & David Moste"
 output: 
   prettydoc::html_pretty:
     theme: architect
@@ -10,13 +10,32 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+<br><br>
+## Introduction
 
-## RedditExtractoR to query reddit threads and extract relevant comments
+In this project we worked as a team to gather text data to address the question, **"Which are the most valued data science skills?"** Our approach involved scraping data from two very different sources: The job-listing site [Indeed](https://www.indeed.com/) and the content aggregation site [Reddit](https://www.reddit.com/). We are attempting to get two very different perspectives on valued data science skills: one from the perspective of the job market and another from relevant conversations within a subset of the data science community.  
+<br>
+Here we describe the method used to scrape text data from the two sources as well as the methods used to process and clean the data.  
+<br>
 
-RedditExtractoR is a collection of tools for extracting unstructured data from the social media website Reddit. In this demo we will use RedditExtractoR functions to extract text comment data from relevant threads. We will then use dplyr and tidyr methods to clean and tidy the data.
+**Table of Contents**  
 
-**Goal** Query reddit for threads relevant to 'Data science skills', collect and mine text for insights, chiefly: "What are the most valued data science skills 
+* Libraries used
+* Scraping Relevent Reddit Comments
+    + Query Reddit for relevant comments with get_reddit()
+    + Query Reddit for relevant URLs with reddit_urls() and accessing comments with reddit_content()
+    + Combining comments & removing duplicates cases
+* Scraping Indeed Text Data    
+* Comment cleaning with the text mining library **tm**
+    + cleaning Reddit data
+    + cleaning Indeed data
+* Natural Language Processing with the udpipe library
+    + processing Reddit data
+    + processing Indeed data
 
+## Libraries used
+
+The library are used at various steps in this file. The use is detailed through out the text.
 ```{r, message=FALSE}
 library( RedditExtractoR )
 library( dplyr )
@@ -30,27 +49,33 @@ library( reshape2 )
 library( ggplot2 )
 library( lattice )
 ```
+<br><br>
+
+## Scraping Relevent Reddit Comments with **redditExtractoR**
+
+Reddit is a popular content aggregations cite with different boards, or 'subreddits' dedicated (and strictly moderated) for specific topics. This describes the methods used to scrape Reddit comments relevent to data science skills from the subreddit r/datascience.
+
+RedditExtractoR is an R library with tools specific for extracting unstructured data from Reddit. RedditExtractoR functions were used to extract text comment data from relevant threads. 
+
+**Goal** Query reddit for threads relevant to 'Data science skills', collect and mine text for insights, chiefly: "What are the most valued data science skills 
 
 
-### Query for relevant URLs  
+### Query Reddit for relevant comments with get_reddit()
 
-get_reddit() function was used in multiple queries withing the subreddit r/datascience to find relevant thread & comment results for such terms as 'data science skills', 'data scince tools', 'learning data science', 'data tools' etc.  
+get_reddit() function was used in multiple queries withing the subreddit r/datascience to find relevant thread & comment results for such terms as 'data science skills', 'data science tools', 'learning data science', 'data tools' etc.  
 
 This is an example query:  
-<code>
-closeAllConnections()  
+**closeAllConnections()  
 URLs <- get_reddit(  
   search_terms   = "data science skills",  
   cn_threshold = 5,  
   subreddit = 'datascience'  
-)  
-</code>
-
-The result of a query is a data.frame with 18 features
+)**  
 
 
-### URL data.frame
-Mulitiple querries were performed on permutations of data + science + skills + tools + learning. The resulting data.frames were combined with the rbind() function and exported as a .csv file. The file was uploaded to the author's github to be accessed here:
+The result of a query is a data.frame with 18 features one of them being the comments from relevent threads  
+
+Mulitiple querries were performed and the resulting data.frames were combined with the rbind() function and exported as a .csv file. The file was uploaded to the B. Cooper's github to be accessed here:
 
 ```{r}
 rTexts <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/allTexts.csv'
@@ -59,24 +84,20 @@ dim( rTexts_df )
 ```
 
 
-### Collecting More Comments
+### Query Reddit for relevant URLs with reddit_urls() and accessing comments with reddit_content()   
 
 Comments were also collected with other redditExtractoR methods.
 thread URLs were collected using the reddit_urls using the same search criteria that was used with get_reddit()
 
-The data.frames from multiple reddit_URLs() queries were collated with rbind()
-Next, the a for loop was used to scrape the comments from each URL with the redditExractoR function reddit_content():
+The data.frames from multiple reddit_URLs() queries were collated with rbind() Next, the a for loop was used to scrape the comments from each URL with the redditExractoR function reddit_content():
 
-<code>
-#Here is an example query with reddit_urls():  
-closeAllConnections()  
+Here is an example query with reddit_urls():  
+**closeAllConnections()  
 URLs <- reddit_urls(  
   search_terms   = "data science skills",  
   cn_threshold = 1,  
   subreddit = 'datascience'  
 )  
-#This code was used to collect comments  
-#I had a lot of difficulty running this as connections kept timing out!   Could not find a work around without wasting more time, so i moved on  
 numComments <- sum( rURLs_df$num_comments )  
 allComments <- data.frame( matrix( 0, nrow = numComments, ncol = 1 ) )  
 numURLs <- length( rURLs_df$URL )  
@@ -95,8 +116,7 @@ for (aURL in seq(1,numURLs)){
   }  
   IDX <- IDX + numComments_thisURL  
   print(IDX)  
-}  
-</code>
+}**  
 
 The comments that resulted from this approach were exported as a .csv and uploaded to gihub to be accessed here:
 ```{r}
@@ -108,9 +128,9 @@ dim( moreComments_df )
 ```
 
 
-### Combining Comments & removing duplicates
+### Combining Comments & removing duplicates cases
 
-Multiple queries with similar search terms predictably yielded overlapping results. Therefore, we will create a new data.frme with just the 'comment' feature and remove the duplicates
+Multiple queries with similar search terms predictably yielded overlapping results. Therefore, we will create a new data.frame with just the 'comment' feature and remove the duplicates
 
 ```{r}
 #combine comments from different redditExtractoR methods
@@ -121,29 +141,41 @@ dim( allComments_df )
 allComments_df <- allComments_df %>% unique()
 dim( allComments_df )
 ```
+<br><br>  
+
+## Scraping Indeed Text Data
+<br><br>
+
+
+## Comment cleaning with the text mining library **tm**
+We will now use a text mining library to break the text into word elements, group like elements & calculate their frequency. 
+
+### Cleaning Reddit data
+
+We previously used multiple redditExtractoR methods to build a data.frame of *hopefully* relevant Reddit comments. Now we will use the tm library to reformat the comments to a structure that holds all the unique words across the dataset as well as a count of the occurence frequency. We start for casting the reddit data.frame as a corpus, or a collection of documents. This transformation is necessary for us to apply the tm_map() methods to the text data.
 
 ```{r, results='hide', warning=F}
+#VectorSource interprets each element as a document & Corpus casts the result as a collection of documents
 commentCorpus <- Corpus( VectorSource( allComments_df ) )
+#We pipe the corpus through several tm_map() methods
 commentCorpus <- commentCorpus %>%
   tm_map(removePunctuation) %>% ##eliminate punctuation
   tm_map(removeNumbers) %>% #no numbers
   tm_map(stripWhitespace) %>%#white spaces
   tm_map(tolower)%>% ##make all words lowercase
   tm_map(removeWords, stopwords("en")) 
-```
 
-```{r}
-
+#convert the corpus to a matrix to facilitate fursther analysis
 commentCorpus_mat <-as.matrix(TermDocumentMatrix( commentCorpus ))
 commentCorpus_wordFreq <-sort(rowSums(commentCorpus_mat), decreasing=TRUE)
-top15 <- commentCorpus_wordFreq[1:15]
 
+#visualize the top 15 most frequeny words in the data
+top15 <- commentCorpus_wordFreq[1:15]
 aplot <- as.data.frame( melt( top15 ) )
 aplot$word <- dimnames( aplot )[[1]]
 aplot$word <- factor(aplot$word,
                       levels=aplot$word[order(aplot$value,
                                                decreasing=F)])
-
 fig <- ggplot(aplot, aes(x=word, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word in Corpus") + 
@@ -151,48 +183,46 @@ fig <- ggplot(aplot, aes(x=word, y=value)) +
   coord_flip()
 print(fig)
 
-
-top1000 <- commentCorpus_wordFreq[1:1000]
-top1000_words <- as.data.frame( melt( top1000 ) )
-top1000_words$word <- dimnames( top1000_words )[[1]]
-top1000_words$word <- factor(top1000_words$word,
-                    levels=top1000_words$word[order(top1000_words$value,
-                                               decreasing=T)])
-
-
+#create a data.frame that holds the 1000 most frequent words and the corresponding frequencies
+reddit1000 <- commentCorpus_wordFreq[1:1000]
+reddit1000_words <- as.data.frame( melt( reddit1000 ) )
+reddit1000_words$word <- dimnames( reddit1000_words )[[1]]
+reddit1000_words$word <- factor( reddit1000_words$word,
+                    levels = reddit1000_words$word[ order( 
+                      reddit1000_words$value,decreasing=T)])
 ```
 
-```{r}
-set.seed(32) #be sure to set the seed if you want to reproduce the same again
-
-wordcloud(words=names(commentCorpus_wordFreq), freq=commentCorpus_wordFreq, scale=c(3,.5),max.words = 200, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
-```
+### Cleaning Indeed data
 
 
-### Process the Comments further with the udpipe library
-Here we use the udpipe library to tag and select for words that are nouns
+## Natural Language Processing with the udpipe library
 
-https://towardsdatascience.com/easy-text-analysis-on-abc-news-headlines-b434e6e3b5b8
-```{r}
+Here we use the udpipe library to apply some basic Natural Language Processing on the text. We tag the words with part of speach and select for words that are nouns under the assumption that nouns their frequency of occurance will be most informative about the data science skills in the text.
+
+We start by downloading and loading into the R environment an English language model for udpipe to apply to our text
+
+```{r, message=F}
 model <- udpipe_download_model(language = "english")
 udmodel_english <- udpipe_load_model(file = model$file_model)
 ```
 
+### Precessing Reddit data
+
 ```{r}
-top1000_processedWords <- udpipe_annotate(udmodel_english, 
-                                          top1000_words$word )
-top1000_NLP <- data.frame(top1000_processedWords)
-head( top1000_NLP )
+reddit1000_processedWords <- udpipe_annotate(udmodel_english, 
+                                          reddit1000_words$word )
+reddit1000_NLP <- data.frame(reddit1000_processedWords)
+head( reddit1000_NLP )
 ```
 
 
 ```{r}
 #remove duplicated word entries (for ambiguous text)
-top1000_NLP <- top1000_NLP[ !duplicated( top1000_NLP$doc_id ), ]
+reddit1000_NLP <- reddit1000_NLP[ !duplicated( reddit1000_NLP$doc_id ), ]
 #merge two dataframes
-top1000_NLP$value <- top1000_words$value
+reddit1000_NLP$value <- reddit1000_words$value
 #Most occuring nouns
-nouns <- subset(top1000_NLP, upos %in% c("NOUN")) 
+nouns <- subset(reddit1000_NLP, upos %in% c("NOUN")) 
 #to check if i'm missing anything interesting:
 #verbs <- subset(top1000_NLP, upos %in% c("VERB")) 
 #adjs <- subset(top1000_NLP, upos %in% c("ADJ")) 
@@ -201,30 +231,26 @@ nouns <- nouns %>% group_by( lemma ) %>%
   arrange( desc( value ) )
 nouns$lemma <- factor(nouns$lemma, 
                          levels = rev(nouns$lemma))
-#barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
-         #main = "Most occurring nouns", xlab = "Freq")
-png('redditHisto.png')
+
 fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
   coord_flip()
 print(fig)
-dev.off()
 ```
 
 
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
-#png('redditWordcloud.png')
 wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
-#dev.off()
 ```
 
 
-### Indeed Corpus
+### Processing Indeed data
 
+We now apply the same procedures to the equivalent data.frame of Indeed text data.
 ```{r}
 URL <- 'https://raw.githubusercontent.com/dmoste/DATA607/master/Project%203/corpus.csv'
 indeedCorpus_df <- read.csv( URL, stringsAsFactors = F) %>%
@@ -253,21 +279,18 @@ nouns$lemma <- factor(nouns$lemma,
                          levels = rev(nouns$lemma))
 #barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
          #main = "Most occurring nouns", xlab = "Freq")
-#png('udpipeIndeedHisto.png')
+
 fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
   coord_flip()
 print(fig)
-#dev.off()
 ```
 
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
-#png('udpipeIndeedWordcloud.png')
 wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
-#dev.off()
 ```
 
