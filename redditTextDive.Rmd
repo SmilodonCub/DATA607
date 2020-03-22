@@ -258,6 +258,8 @@ udmodel_english <- udpipe_load_model(file = model$file_model)
 
 ### Precessing Reddit data
 
+Now we apply udpipe's English language model to the Reddit text data. The udpipe_annotate() function will process each word and associate several features. For instance, it will tag each word with it's most likely part of speach (e.g. noun, verb etc)
+
 ```{r}
 reddit1000_processedWords <- udpipe_annotate(udmodel_english, 
                                           reddit1000_words$word )
@@ -265,24 +267,24 @@ reddit1000_NLP <- data.frame(reddit1000_processedWords)
 head( reddit1000_NLP )
 ```
 
-
+Now that the words have been annotated, we can subset the data for the noun with the assumption that nouns will be more informative about data science skills.
 ```{r}
 #remove duplicated word entries (for ambiguous text)
 reddit1000_NLP <- reddit1000_NLP[ !duplicated( reddit1000_NLP$doc_id ), ]
 #merge two dataframes
 reddit1000_NLP$value <- reddit1000_words$value
 #Most occuring nouns
-nouns <- subset(reddit1000_NLP, upos %in% c("NOUN")) 
+nounsReddit <- subset(reddit1000_NLP, upos %in% c("NOUN")) 
 #to check if i'm missing anything interesting:
 #verbs <- subset(top1000_NLP, upos %in% c("VERB")) 
 #adjs <- subset(top1000_NLP, upos %in% c("ADJ")) 
-nouns <- nouns %>% group_by( lemma ) %>% 
+nounsReddit <- nounsReddit %>% group_by( lemma ) %>% 
   summarise( value = sum( value )) %>%
   arrange( desc( value ) )
-nouns$lemma <- factor(nouns$lemma, 
-                         levels = rev(nouns$lemma))
+nounsReddit$lemma <- factor(nounsReddit$lemma, 
+                         levels = rev(nounsReddit$lemma))
 
-fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
+fig <- ggplot(head(nounsReddit,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
@@ -290,11 +292,11 @@ fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) +
 print(fig)
 ```
 
-
+Present the results as a word cloud:
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
-wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+wordcloud(words=nounsReddit$lemma, freq=nounsReddit$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
 ```
 
 
@@ -312,19 +314,19 @@ indeed1000_NLP <- indeed1000_NLP[ !duplicated( indeed1000_NLP$doc_id ), ]
 #merge two dataframes
 indeed1000_NLP$value <- indeed1000_words$value
 #Most occuring nouns
-nouns <- subset(indeed1000_NLP, upos %in% c("NOUN")) 
+nounsIndeed <- subset(indeed1000_NLP, upos %in% c("NOUN")) 
 #to check if i'm missing anything interesting:
 #verbs <- subset(top1000_NLP, upos %in% c("VERB")) 
 #adjs <- subset(top1000_NLP, upos %in% c("ADJ")) 
-nouns <- nouns %>% group_by( lemma ) %>% 
+nounsIndeed <- nounsIndeed %>% group_by( lemma ) %>% 
   summarise( value = sum( value )) %>%
   arrange( desc( value ) )
-nouns$lemma <- factor(nouns$lemma, 
-                         levels = rev(nouns$lemma))
+nounsIndeed$lemma <- factor(nounsIndeed$lemma, 
+                         levels = rev(nounsIndeed$lemma))
 #barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
          #main = "Most occurring nouns", xlab = "Freq")
 
-fig <- ggplot(head(nouns,15), aes(x=lemma, y=value)) + 
+fig <- ggplot(head(nounsIndeed,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
@@ -335,6 +337,9 @@ print(fig)
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
-wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 300, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+wordcloud(words=nounsIndeed$lemma, freq=nounsIndeed$value, scale=c(3,.5),max.words = 300, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
 ```
 
+There are some remarkable similarities between the words in each of the data sets. In both of the histograms, we can see several words in common.
+
+<br><br><br>
