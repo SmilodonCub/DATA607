@@ -12,16 +12,23 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 <br><br> 
 
-## Introduction
+# Introduction
 
 In this project we worked as a team to gather text data to address the question, **"Which are the most valued data science skills?"** Our approach involved scraping data from two very different sources: The job-listing site [Indeed](https://www.indeed.com/) and the content aggregation site [Reddit](https://www.reddit.com/). Our motivation is to get two very different perspectives on valued data science skills: one from the perspective of the job market and another from relevant conversations within a subset of the data science community.  
 <br>
-Here we describe the methods used to scrape text data from the two sources, the methods used to process and clean the data, discuss our analysis approaches and present our findings.  
+Here we describe the methods used to scrape text data from the two sources, the methods used to process and clean the data, discuss our analysis approaches and present our findings. We have two Analysis directions that we pursue:
+
+1. **Unsupervised Natural Language Processing (NLP) Analysis** This approach makes no assumptions about which data science skills to extract information about from the raw text data. We use the NLP library udpipe to apply a model of the English language to the text scraped from Indeed & Reddit to identify data science skills that occur with the highest frequency.
+2. **Supervised Word & Phrase Frequency Analysis** Here we scrape a new set of text from Indeed and search the text with known data science skills terms
 <br>
 
-**Table of Contents**  
 
+## Table of Contents 
+
+**R Environment**
 * Libraries used
+
+**Unsupervised Natural Language Processing (NLP) Analysis**
 * Scraping Relevent Reddit Comments
     + Query Reddit for relevant comments with get_reddit()
     + Query Reddit for relevant URLs with reddit_urls() and accessing comments with reddit_content()
@@ -35,6 +42,13 @@ Here we describe the methods used to scrape text data from the two sources, the 
     + processing Indeed data
 * Centralizing datasets in a Relational Database
 * Joint Analysis of the Normalized Data
+
+**Supervised Word & Phrase Frequency Analysis**
+* Approach to Scraping Indeed Job Listings
+* Putting all the Pieces Together and build our Scraper
+* Analyzing frequencies of Data Science Skills words and phrases
+
+**In Closing**
 * Conclusions
 * Future Directions
 
@@ -43,7 +57,7 @@ Here we describe the methods used to scrape text data from the two sources, the 
 
 ## Libraries used
 
-The library are used at various steps in this file. The use is detailed through out the text.
+The library are used at various steps in this file. The use of prominent libraries are highlighted throughout the text.
 ```{r, message=FALSE}
 library( RedditExtractoR )
 library( dplyr )
@@ -60,11 +74,15 @@ library( rvest )
 library( tidyverse )
 library( SnowballC )
 library( RMySQL )
+library( xml2 )
+library( stringi )
 ```
 <br><br>
 
 ***
 <br>
+
+# Unsupervised Natural Language Processing (NLP) Analysis
 
 ## Scraping Relevent Reddit Comments with **redditExtractoR**
 
@@ -433,6 +451,127 @@ ggplot(data_compare, aes(x = reorder(token, Count), y = Count,
 ```
 <br><br>
 
+# Supervised Word & Phrase Frequency Analysis
+<br>
+## Approach to Scraping Indeed Job Listings
+
+Here we perform a seperate scrape of Indeed to build a text dataset independent of the unsupervised dataset. The Objective is to create a data frame that includes the job titles and the job description 
+
+After looking for a data scientist job in specific location (in this case New York, NY), we we copied the link address and stored the URL in a variable called url. Then we used the xml2 package and the read_html function to parse the page. In short, this means that the function will read in the code from the webpage and break it down into different elements (<div>, <span>, <p>, etc.) for you to analyse it.
+
+
+```{r}
+url <- "https://www.indeed.com/jobs?as_and=data+scientist&as_phr=&as_any=&as_not=&as_ttl=&as_cmp=&jt=all&st=&as_src=&salary=&radius=25&l=New+York%2C+NY&fromage=any&limit=50&sort=&psf=advsrch&from=advancedsearch"
+page <- read_html(url)
+```
+
+
+**The Job Titles **  
+By inspecting the code in the Indeed website using Inspect element tool we see that the The job title is located under the anchor tag. If we look more into it we can also see the it is located under the **jobtitle** CSS selector . 
+
+**Job Descriptions**  
+You’ll notice, that on the current page, there is just a little short description of the job summary. However, we want to get the full description of how many years of experience we need, what skill set is required, and what responsibilities the job entails.
+
+We start by collecting the links on the website. After that we can locate where the job description is located in the document. after inspecting the full description we noticed that the job description is in a <span> element with a class attribute values **.jobsearch-JobComponent-description**. 
+Also we'll need our scraper to include the part the will scrape multiple page results. since the only thing that change in the url when moving from page to another is the number or results, so can scrape multiple pages by messing with this number.
+
+
+### Putting all the Pieces Together and build our Scraper
+
+```{r}
+# We changed the number of results per page from 10 to 50 results per page 
+first_page <- 50 # first page of result 
+last_page <-  500 # last page of results
+results <- seq(from = first_page, to = last_page, by = 50)
+full_df <- data.frame()
+for(i in seq_along(results)) {
+  
+  first_page_url <- "https://www.indeed.com/jobs?as_and=data+scientist&as_phr=&as_any=&as_not=&as_ttl=&as_cmp=&jt=all&st=&as_src=&salary=&radius=25&l=New+York%2C+NY&fromage=any&limit=50&sort=&psf=advsrch&from=advancedsearch"
+  url <- paste0(first_page_url, "&start=", results[i])
+  page <- xml2::read_html(url) 
+  
+Sys.sleep(3) # to avoids error messages such as "Error in open.connect
+##Job Title
+JobTitle <- page %>% 
+rvest::html_nodes('[data-tn-element="jobTitle"]') %>%
+rvest::html_attr("title")
+## Job Link
+links <- page %>% 
+  rvest::html_nodes('[data-tn-element="jobTitle"]') %>%
+  rvest::html_attr("href")
+## Job Description
+job_description <- c()
+  for(i in seq_along(links)) {
+    
+    url <- paste0("https://www.indeed.com/", links[i])
+    page <- xml2::read_html(url)
+    
+job_description[[i]] <- page %>%
+  html_nodes('.jobsearch-JobComponent-description') %>% 
+  html_text() %>%
+  stri_trim_both()
+  }
+}
+df <- data.frame(JobTitle, job_description)
+  full_df <- rbind(full_df, df) %>% 
+    
+mutate_at(vars(JobTitle, job_description), as.character)
+#full_df_count <- str_count(full_df$job_description, "SQL" )
+head(full_df)
+```
+<br>
+
+### Analyzing frequencies of Data Science Skills words and phrases
+
+Here we use our domain knowledge of the Data Science field to perform a top-down search for key skills that we know to be valuable in data science.
+```{r}
+# In this part I'll search and count some words related to data science using mutate and str_count
+skills <- full_df %>%
+mutate(mathematics = str_count(full_df$job_description, "mathematics" )) %>%
+mutate(SQL = str_count(full_df$job_description, "SQL" )) %>%
+mutate(Python = str_count(full_df$job_description, "Python" )) %>%
+mutate(programming = str_count(full_df$job_description, "programming" )) %>%
+mutate(Hadoop = str_count(full_df$job_description, "Hadoop" )) %>%
+mutate(statistics = str_count(full_df$job_description, "statistics" )) %>%
+mutate(mathematics = str_count(full_df$job_description, "mathematics" )) %>%
+mutate(modeling = str_count(full_df$job_description, "modeling" )) %>%
+mutate(communication = str_count(full_df$job_description, "communication" )) %>%
+mutate(Java = str_count(full_df$job_description, "Java" )) %>%
+mutate(Apache = str_count(full_df$job_description, "Apache" )) %>%
+mutate(Tableau = str_count(full_df$job_description, "Tableau" )) %>%
+mutate(computer_science = str_count(full_df$job_description, "computer science" )) %>%
+mutate(TensorFlow = str_count(full_df$job_description, "TensorFlow" )) %>%  
+mutate(big_data = str_count(full_df$job_description, "big data" )) %>% 
+mutate(machine_learning = str_count(full_df$job_description, "machine learning" )) %>%
+mutate(SAS = str_count(full_df$job_description, "SAS" )) %>% 
+mutate(R = str_count(full_df$job_description, "R" )) %>%  
+select(3:19) %>% summarise_all(funs(sum))
+head(skills)
+```
+<br>  
+
+Display the result in a table format:
+```{r}
+table <- gather(skills, "skill", "Count", 1:16) %>% 
+  arrange( Count) %>%
+  mutate(skill = factor( skill, skill))
+table
+```
+
+Visualize as a bar plot:
+```{r}
+p7 <- ggplot(data=table, aes(x=skill, y=Count)) + geom_bar(stat="identity") + coord_flip()
+p7
+```
+<br>  
+
+From the barplot figure above, we can see that the data science skills words and phrases of interest were well represented in the text data. In particular, we observe hard skills like machine learning, Python and SQL occured frequently. However, we also see that some soft skills (e.g. communication) are very common as well. Additionally, we observed that several of the terms used here had corresponded frequent occurances in the unsupervised NLP analysis. For example python, and machine (learining).
+
+
+
+# In Closing
+<br>
+
 ## Conclusions
 
 For this project, we scraped, wraggled and processed text data from both Indeed and Reddit. We believe that these sources give two different approaches to addressing which skills are the most valuable in data science. 
@@ -444,4 +583,6 @@ Based on the analysis of our data, it appears that some of the most valued skill
 1. It would be very interesting to see how this data correlates with text data sets from other sources. Perhaps from other groups for this Project 3?...
 
 2. For our analysis, we only looked at single words. We could revisit the data with RAKE udpipe methods for phrases or word pairings (e.g. 'machine learning' or 'big data')
+
+3. For the unsupervised approach to analyzing the text data, we made the assumption that nouns would be more informative informative than other parts of speech. This was based on subjectively screening the adjectives, verbs etc. in the data. However, we could take measures to verify this assumption.
 <br><br><br>
