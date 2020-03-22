@@ -10,7 +10,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-<br><br>
+<br><br> 
+
 ## Introduction
 
 In this project we worked as a team to gather text data to address the question, **"Which are the most valued data science skills?"** Our approach involved scraping data from two very different sources: The job-listing site [Indeed](https://www.indeed.com/) and the content aggregation site [Reddit](https://www.reddit.com/). We are attempting to get two very different perspectives on valued data science skills: one from the perspective of the job market and another from relevant conversations within a subset of the data science community.  
@@ -48,6 +49,9 @@ library( udpipe )
 library( reshape2 )
 library( ggplot2 )
 library( lattice )
+library( rvest )
+library( tidyverse )
+library( SnowballC )
 ```
 <br><br>
 
@@ -144,7 +148,11 @@ dim( allComments_df )
 <br><br>  
 
 ## Scraping Indeed Text Data
+A [python script](https://github.com/dmoste/DATA607/blob/master/Project%203/data_science_scrape.py) that utilizes the selenium and BeautifulSoup packages was used to collect a list of Indeed job add links for Data Science jobs.
+
+
 <br><br>
+
 
 
 ## Comment cleaning with the text mining library **tm**
@@ -194,6 +202,48 @@ reddit1000_words$word <- factor( reddit1000_words$word,
 
 ### Cleaning Indeed data
 
+Here we will access the listings output and use tm methods to clean the data. We will follow the same steps as we did with the Reddit cemments data:
+
+```{r, message=F, warning=F}
+# read in the links that R will scrape from a csv and create column names
+URL <- 'https://raw.githubusercontent.com/dmoste/DATA607/master/Project%203/data_science_links.csv'
+links <- read.csv(URL, header = FALSE)
+names(links) <- c("Link")
+links$Link <- as.character(links$Link)
+
+# scrape the lists from each link and add the text to a single string (textList)
+textList <- c()
+for(i in 1:length(links$Link)){
+  h_text <- read_html(links[i,]) %>%
+    html_nodes("li") %>%
+    html_text()
+  textList <- rbind(textList, h_text)
+}
+
+# create VCorpus from textList
+commentCorpus_I <- Corpus(VectorSource(textList))
+
+# manipulte the corpus to remove unwanted information
+commentCorpus_I <- commentCorpus_I %>%
+  tm_map(removePunctuation) %>%
+  tm_map(removeNumbers) %>%
+  tm_map(stripWhitespace) %>%
+  tm_map(tolower)%>%
+  tm_map(removeWords, stopwords("english"))
+
+# find the most used words from the job postings
+commentCorpus_I <-as.matrix(TermDocumentMatrix(commentCorpus_I))
+commentCorpus_wordFreq_I <-sort(rowSums(commentCorpus_I), decreasing = TRUE)
+
+#create a data.frame that holds the 1000 most frequent words and the corresponding frequencies
+indeed1000 <- commentCorpus_wordFreq_I[1:1000]
+indeed1000_words <- as.data.frame( melt( indeed1000 ) )
+indeed1000_words$word <- dimnames( indeed1000_words )[[1]]
+indeed1000_words$word <- factor( indeed1000_words$word,
+                    levels = indeed1000_words$word[ order( 
+                      indeed1000_words$value,decreasing=T)])
+```
+<br><br>
 
 ## Natural Language Processing with the udpipe library
 
@@ -252,21 +302,15 @@ wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, ra
 
 We now apply the same procedures to the equivalent data.frame of Indeed text data.
 ```{r}
-URL <- 'https://raw.githubusercontent.com/dmoste/DATA607/master/Project%203/corpus.csv'
-indeedCorpus_df <- read.csv( URL, stringsAsFactors = F) %>%
-  rename( word = X, count = x )
-head( indeedCorpus_df )
-
-
 indeed1000_processedWords <- udpipe_annotate(udmodel_english, 
-                                          indeedCorpus_df$word[1:1000] )
+                                          indeed1000_words$word )
 indeed1000_NLP <- data.frame(indeed1000_processedWords)
-head( indeed1000_NLP )
+#head( indeed1000_NLP )
 
 #remove duplicated word entries (for ambiguous text)
 indeed1000_NLP <- indeed1000_NLP[ !duplicated( indeed1000_NLP$doc_id ), ]
 #merge two dataframes
-indeed1000_NLP$value <- indeedCorpus_df$count[1:1000]
+indeed1000_NLP$value <- indeed1000_words$value
 #Most occuring nouns
 nouns <- subset(indeed1000_NLP, upos %in% c("NOUN")) 
 #to check if i'm missing anything interesting:
@@ -291,6 +335,6 @@ print(fig)
 ```{r}
 set.seed(36) #be sure to set the seed if you want to reproduce the same again
 
-wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 360, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+wordcloud(words=nouns$lemma, freq=nouns$value, scale=c(3,.5),max.words = 300, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
 ```
 
