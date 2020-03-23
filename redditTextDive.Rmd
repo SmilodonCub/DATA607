@@ -80,6 +80,7 @@ library( SnowballC )
 library( RMySQL )
 library( xml2 )
 library( stringi )
+library( ggpubr )
 ```
 <br><br>
 
@@ -456,9 +457,22 @@ ggplot(data_compare, aes(x = reorder(token, Count), y = Count,
        fill = "Site") +
   coord_flip()
 ```
-The figure above is interesting because it directly compares the normalized occurances of nouns that were shared in common between the Indeed and Reddit data. Although we did not quantify this, we can observe in the plot a correlation of commonly shared words.  
+<br>
 
-**Our key finding here:** we observe several nouns that, using our domain knowledge, we identify as data science skills: Experience, python, business, analysis, degree and machine (learning). Our data indicate that these skills examples are represented the most when input is considered from both the job market perspective (Indeed) and the context of the data science community (Reddit).
+The figure above is interesting because it directly compares the normalized occurances of nouns that were shared in common between the Indeed and Reddit data. Next, we can observe the plot that quantifies the correlation of commonly shared words.
+<br>
+
+```{r}
+data_compare <- data_compare %>% pivot_wider( names_from = Database, values_from = Count ) 
+cor( data_compare$Reddit, data_compare$Indeed)
+```
+```{r}
+ggscatter(data_compare, x= "Reddit", y= "Indeed", 
+          add = "reg.line", cor.coef = TRUE, conf.int = TRUE)
+```
+
+
+**Our key finding here:** we observe several nouns that, using our domain knowledge, we identify as data science skills: Experience, python, business, analysis, degree and machine (learning). Our data indicate that these skills examples are represented the most when input is considered from both the job market perspective (Indeed) and the context of the data science community (Reddit). We also observe a strong correlation of occurences in text for the words that are shared in common between the two datasets.
 
 <br><br>
 
