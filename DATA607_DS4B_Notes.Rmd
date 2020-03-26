@@ -74,7 +74,7 @@ div.blue { background-color:#e68cf6; border-radius: 5px; padding: 20px;}
 </style>
 <div class = "blue">  
 
-#### TAKE THE DATA ... EXTRACT PATTERS ... THAT ARE USEFUL  
+#### TAKE THE DATA ... EXTRACT PATTERNS ... THAT ARE USEFUL  
 
 </div>  
 
@@ -351,3 +351,51 @@ it is important to consider carefully what would be a reasonable baselie against
 ### Evaluation & Baseline performance
 **Majority Classifier** a naie classifier that always chooses the majority class of the training dataset.
 **Accuracy** (TP + TN)/(P + N)
+
+<br>
+
+## Chapter 8 
+### Visualizing Model Performance
+
+Ranking Instead of Classifying
+
+
+
+## Chapter 9
+### Evidence & Probabilities
+
+Targeting online consumers with advertisements.
+**inference:** infering the value of an instances target variable from the values of the instances features
+an instance: ex: a consumer
+target variable ex: will a consumer book a room after seeing an add?
+what features to use to describe the instances?
+humans are notoriously bad at estimating the precise strength of evidence
+
+### Combining evidence probabilistically
+independence: knowing about one event tells you nothing about the other.
+joint probability = probability that both evens will happen p(AB)=P(A)*p(B)
+joint probability using conditional probability: the probability of A and B is A times the probability of B given A.
+**Bayes' Rule** p(H | E)=p(E | H)*p(H)/p(E)
+Bayes rule makes estimating p(H | E) much easier. We need three pieces of information but they're muh easier to estimate with applied domain knowledge.
+We can compute the probability of our hypothesis H given some evidence E by instead looking at the probability of the evidence given the hypothesis, as well as the unconditional probabilities of the hypothesis and the evidence.
+**p(E | H)**  the probability that someone has red spots given that they have the measels.
+**p(H)** probability that someone has measels
+**p(E)** probability that someone has red spots.
+
+### Applying Bayes' Rule to Data Science
+*The Quantity we want to Compute*
+**posterior probability** p(H|E) the probability that the target variable takes on the class of interest after taking the evidence into account
+*The Quantities we can obtain*
+**prior** p(H) the probability that we would assign the class before seeing any evidence. the prevalence in the population as a whole
+**lkelihood** p(E|H) likelihood of seeing the evidence then the H is true
+**evidence** p(E) the likelihood of the evidence. how common is the feature
+
+Naive Bayes p(c|E)=(p(e1|c1)*p(e2|c2)... p(ek|ck))/p(E)
+Naive Bayes classifier: classifies a new example by estimating the probability that the example belongs to each class and reports the class with the highest probability.
+Simplifies so we don't need to calculate p(E)
+Naive bayes tends to perform really well because the violation of th independence assumption tends not to hurt classification performance ...the probability will be overestimated for the correct class and underestimated in the incorrect class(es) (because of 'double counting' instances that are not independent).
+
+**incremental learner** does not need to reprocess all past training examples when new training data becomes available.
+
+**Evidence Lift** the amount by which a classifier cencentrates the positive above the negative examples.
+
