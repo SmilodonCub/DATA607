@@ -327,12 +327,16 @@ nounsReddit <- nounsReddit %>% group_by( lemma ) %>%
 nounsReddit$lemma <- factor(nounsReddit$lemma, 
                          levels = rev(nounsReddit$lemma))
 
+jpeg('dataReddit.jpg')
 fig <- ggplot(head(nounsReddit,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
-  coord_flip()
+  coord_flip() +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16,face="bold"))
 print(fig)
+dev.off()
 ```
 
 Present the results as a word cloud:
@@ -369,12 +373,16 @@ nounsIndeed$lemma <- factor(nounsIndeed$lemma,
 #barchart(sentence ~ value, data = head(nouns, 20), col = "cadetblue", 
          #main = "Most occurring nouns", xlab = "Freq")
 
+#jpeg('dataIndeed.jpg')
 fig <- ggplot(head(nounsIndeed,15), aes(x=lemma, y=value)) + 
   geom_bar(stat="identity") + 
   xlab("Word") + 
   ylab("Count") +
-  coord_flip()
+  coord_flip() +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16,face="bold"))
 print(fig)
+#dev.off()
 ```
 
 ```{r}
@@ -448,14 +456,19 @@ data_compare <- indeed_data %>%
 
 Visualize the joint dataset
 ```{r}
-ggplot(data_compare, aes(x = reorder(token, Count), y = Count,
+jpeg('data_compare.jpg')
+joint <-ggplot(data_compare, aes(x = reorder(token, Count), y = Count,
                           fill = Database)) +
   geom_bar(position = "dodge", stat = "identity") +
   scale_fill_brewer(palette = "Dark2") +
   labs(x = "Word",
        y = "Usage",
        fill = "Site") +
-  coord_flip()
+  coord_flip() +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16,face="bold"))
+joint
+dev.off()
 ```
 <br>
 
@@ -467,8 +480,13 @@ data_compare <- data_compare %>% pivot_wider( names_from = Database, values_from
 cor( data_compare$Reddit, data_compare$Indeed)
 ```
 ```{r}
-ggscatter(data_compare, x= "Reddit", y= "Indeed", 
-          add = "reg.line", cor.coef = TRUE, conf.int = TRUE)
+jpeg('data_cor.jpg')
+corplot <- ggscatter(data_compare, x= "Reddit", y= "Indeed", 
+          add = "reg.line", cor.coef = TRUE, conf.int = TRUE) +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16,face="bold"))
+corplot
+dev.off()
 ```
 
 
@@ -586,8 +604,14 @@ table
 
 Visualize as a bar plot:
 ```{r}
-p7 <- ggplot(data=table, aes(x=skill, y=Count)) + geom_bar(stat="identity") + coord_flip()
+#jpeg('supIndeed.jpg')
+p7 <- ggplot(data=table, aes(x=skill, y=Count)) + geom_bar(stat="identity") + 
+  coord_flip() +
+    theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16,face="bold"))
 p7
+#dev.off()
+
 ```
 <br>  
 

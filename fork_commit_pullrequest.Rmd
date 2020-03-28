@@ -1,0 +1,159 @@
+---
+title: "Github Step-by-Step: fork a github repository, commit contributions & send a pull request"
+author: "Bonnie Cooper"
+output: html_document
+---
+<br><br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Getting started
+you should have the following ready:
+1. The material you'd like to submit for your assignment
+2. teh internets
+3. an open terminal shell (e.g. you can use the one in rstudio)
+<br>
+
+## 1) goto the [SPRING2020TIDYVERSE repository](https://github.com/acatlin/SPRING2020TIDYVERSE) on githut.
+In the upper right corner select the 'Fork'.   
+
+<img src="ACfork.png" width="50%" height="50%" />
+
+This will copy the repository to your github account so you can work with it directly without affecting the classes repository yet. Once the forking process is done, you might find it might be helpful to keep two windows open: the original repository and another tab in your browser for your new copy.
+<br>
+
+## 2) configure git
+In terminal, change directories (**cd**) such that you are in the directory you'd like to add the directory for the local copy of the branch you just forked.
+I chose to keep this assignment's material in a seperate directory from the rest of my DATA607 material, so I needed to configure git:
+<br>
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">git config --global user.name "ReallyAwesomeName"   
+&nbsp;git config --global user.emal "radEmailAddy123@bestdomain.com"
+</span>
+</code>
+
+</div>
+<br>
+
+## 3) Setup our local directory
+We need a space to sync our newly edited/written code with our copy of the repository. Let's give this work a home of it's own & then change to that directory
+<br>
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">mkdir DATA607_Tidyverse   
+&nbsp;cd DATA607_Tidyverse
+</span>
+</code>
+
+</div>
+<br>
+
+## 4) Get github SSH for our forked copy
+Now we need to copy the SSH key for the cloned github repository. **Attention** Make sure this is the key for the new copy in your repository. Things won't work if you go to the class repository & copy that key since we don't have permission.
+
+<img src="bcssh.png" width="50%" height="50%" />
+<br>
+
+## 5) Now clone the repo...
+In terminal:
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">git clone git@github.com:urgithubusername/SPRING2020TIDYVERSE.git
+&nbsp;cd SPRING2020TIDYVERSE
+</span>
+</code>
+
+</div>
+<br>
+
+## 6) Was this a success?
+In terminal:
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">ls
+</span>
+</code>
+
+</div>
+you should see the contents of the github branch as output (all the other student's uploaded projects)
+<br>
+
+## 7) Get Tidyverse contributions together
+great, so we have synched up to our cloned repository, now we need to add the course material we would like to add to the new directory that we created a few steps ago. If it's an .Rmd or any other scrips now is the time to cut/copy/move/paste into the new directory (whatever/your/path/is/SPRING2020TIDYVERSE).
+Now in terminal:
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">git status
+</span>
+</code>
+
+</div>
+You should see the files you added indicated in green the output.
+<br>
+
+## 8) Add and Commit changes
+If you see your files in green now we can add the changes to the staging area and commit them to our local copy:
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">git add myExcellentWork.Rmd suchACoolScript.r bestData.csv  
+&nbsp;git commit -m 'added my contribution'
+</span>
+</code>
+
+</div>
+<br>
+
+## 9) Add the remote repository url and push the changes
+We have committed our changes to our local copy, but now we need to push the changes to the remote copy (the forked copy on your personal github account). So let's do that!
+In terminal:
+<style>
+div.blue { background-color:#000001; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+<span style="color: white;">git remote add origin git@github.com:SmilodonCub/SPRING2020TIDYVERSE.git  
+&nbsp;git push origin master
+</span>
+</code>
+</div>
+<br>
+
+## 10) Ready to make a pull request!
+From your github account, select 'New pull request':
+
+<img src="nprBMC.png" width="70%" height="70%" />
+
+From there, you should see something resembling this screen:
+
+<img src="pullr.png" width="70%" height="70%" />
+
+Select 'Create pull request' then enter any comment detail you wish before hitting 'Create pull request once again. For example:
+
+
+<img src="submitted.png" width="70%" height="70%" />
+
+
+Now all you have to do is wait for the instructor to accept the proposed additions/changes.
+<br>
+I hope this was helpful!
+<br><br><br>
