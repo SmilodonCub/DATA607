@@ -212,7 +212,7 @@ ggplot(weightedRankTotal_plot, aes(x=series, y=weightedRank)) +
 
 Interesting, from the figure above we can see that the ordering has changed. In the previous figure, 'Tokyo Ghoul' was the most frequently occuring series to have a title holding a position on the best seller's list. However, if we recalculate the ranking such that the occurances are weighted by the relative ranking, we see that, in fact, it is 'One-Punch Man' that had the highest popularity.
 <br><br>
-<img src="opm.png" width="100%" height="100%" />
+<img src="opm2.png" width="100%" height="100%" />
 
 ### References
 
