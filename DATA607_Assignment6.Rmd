@@ -1,0 +1,221 @@
+---
+title: "The New York Times' Best Selling Mangas"
+author: "Bonnie Cooper"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+---
+<img src="banner.png" width="200%" height="200%" />
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Intro
+
+Manga has been gaining in popularity in the North America in recent years. There is no wondering why: the stunning visuals and imaginative story arcs makes manga a joy to read! 
+
+This demo will explore which mangas have captured North American eyes by accessing the best selling manga series and visualizing their rankings. Here we will write code in R code to directly access information from the [New York Times Books API](https://developer.nytimes.com/docs/books-product/1/overview), read in the JSON data to an R DataFrame, 'tidy' the data with tidyverse methods and visualize the results.  
+
+Let's get started by setting up our environment with the R libraries we will be needing:
+
+```{r, message=F}
+library(jsonlite)
+library(dplyr)
+library(tidyverse)
+```
+
+### Accessing data from the NYTs' Books API
+
+Beforehand, you will need to register on The Times' Developers site and register an App, but don't worry it's free and very easy to do. Once that process is complete you will have API keys to use for access.  
+
+To use this demo, just uncomment the first line of code below and replace the portion indicated with you key.  
+
+Let's get started with a 'List Names' call which takes the general form:  
+<style>
+div.blue { background-color:#FAF0C1; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+/lists/names.json
+</code>
+</div>
+
+```{r include=FALSE}
+NYTkey <- 'api-key=btpDl6AcZurJSaPbvHehvme8a6b7RIjF'
+```
+
+```{r}
+#NYTkey <- 'api-key=*pasteyourfreeNYTAPIkeyhere*'
+stemNYT_books <- 'https://api.nytimes.com/svc/books/v3/'
+serviceCall <- '/lists/names.json?'
+#build a string to make a List Names call to the NYT's Books API
+fullCall <- paste0( stemNYT_books, serviceCall, NYTkey)
+#make the call & cast to a data.frame
+callResult <- fromJSON(fullCall) %>% data.frame()
+
+head(callResult,3)
+```
+
+There are many different best sellers lists, but let's try to find the ones related to manga...
+
+```{r}
+#use tidyverse methods to go through each 'list_name_encoded'
+#and test for the string 'manga'
+#filter for the results that test true
+mangaResult <- callResult %>% 
+    rowwise() %>% 
+    mutate( isManga = grepl( 'manga', results.list_name_encoded )) %>% 
+    filter( isManga == TRUE )
+mangaList <- mangaResult$results.list_name_encoded
+mangaList
+```
+
+So there are two categories that relate to 'manga'. We will put the "graphic-books-and-manga" to the side for now and focus on the "manga" listings.  
+
+Next we will collect a year's worth of NYT weekly best seller listings for the "manga category" through multiple 'List Data' calls for the year 2016.
+
+'List Data' calls return the best sellers for a specified week and category and take the general form:
+<style>
+div.blue { background-color:#FAF0C1; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+<code>
+/lists/2019-01-20/hardcover-fiction.json
+</code>
+</div>
+
+```{r}
+genre_name <- mangaList[1]
+#get the date of every Sunday for the year 2016
+everyMonday2016 <- as.Date("2016_01_03", format="%Y_%m_%d") +seq(0,365,by=7)
+numWeeks <- length( everyMonday2016 )
+```
+
+With this for loop, go through each date in everyMonday2016, make a query to the Books API and select a subset of features.
+```{r, eval=FALSE, warning=FALSE}
+mangaLists2016 <- list() #an empty list to hold our results
+for (aWeek in seq( 1, numWeeks ) ) {
+    fullQuery_ListData <- paste0(stemNYT_books, 'lists/',
+                             everyMonday2016[aWeek] ,'/', 
+                             genre_name, '.json?', NYTkey) #build our query 
+    mangaData <- fromJSON(fullQuery_ListData) #make the call
+    mangaResults <- mangaData$results$books %>% #select a subset of features
+        select( rank, title, author, publisher, description, book_image ) 
+    mangaLists2016[[aWeek]] <- mangaResults
+    #message('retrieving week ', aWeek )
+    Sys.sleep(10) #necessary to avoid http errors
+}
+```
+
+```{r, echo=FALSE}
+load("mangaLists2016.Rdata")
+```
+
+### Make Tidy & Visualize
+Let's prepare the data and make the first of our visualizations. We will look at all manga titles that were listed on the NYT's Manga top 10 in 2016.
+
+```{r}
+#combine the list of data.frames into a single data.frame
+allManga2016 <- rbind_pages(mangaLists2016)
+#a feature with corresponding dates for each record
+allManga2016$weekof <- do.call("c", map( everyMonday2016, function(x) rep(x,10) ))
+
+#aggregate by the data by title and keep track of the counts
+mostFreqMangas <- allManga2016 %>% 
+    group_by( title ) %>% 
+    summarize( weekson2016top10 = n()) %>%
+    arrange( weekson2016top10 )
+
+#visualize the top 25 most frequent titles
+mostFreqMangas_plot <- mostFreqMangas[132:156,]
+mostFreqMangas_descOrder <- mostFreqMangas$title[132:156]
+ggplot(mostFreqMangas_plot, aes(x=title, y=weekson2016top10)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_x_discrete( limits = mostFreqMangas_descOrder) +
+  ggtitle('Top 25 Most Frequent Manga Titles') +
+  xlab('Title') +
+  ylab('count') 
+```
+
+That's great, but as we can see, there are several series that have had multiple titles listed as best sellers. It would be more informative to combine volumes into one representation. 
+Prepare the data to make a new visualization of the most frequent series to have a volume(s) appear on the best seller's list...
+```{r}
+#take a list of series titles & condense the text to just alphanumerics
+seriesTitles <- c("ONE-PUNCH MAN","TOKYO GHOUL","ATTACK ON TITAN","NARUTO","THE LEGEND OF ZELDA","ORANGE","HAIKYU","MY HERO ACADEMIA","MONSTER MUSUME","YU-GI-OH","BLACK BUTLER","ASSASSINATION CLASSROOM","ONE PIECE","NICHIJOU","BLUE EXORCIST","BLEACH","BERSERK","AKAME GA KILL","YOTSUBA","YONA OF THE DAWN","TWIN STAR EXORCISTS","THE DEMON PRINCE","SERAPH OF THE END","NORAGAMI","NO GAME NO LIFE", "MY MONSTER SECRET","MAGIKA SWORDSMAN","IS IT WRONG TO TRY TO","GOODNIGHT PUNPUN","FOOD WARS","FAIRY TAIL","DRAGONAR ACADEMY","DEATH NOTE","BLACK CLOVER","A SILENT VOICE","12 BEAST","TRINITY SEVEN","THE SEVEN DEADLY SINS","THE IRREGULAR AT MAGIC","THE DEVIL IS A PART-TIMER","THE ANCIENT MAGUS","TABOO TATTOO","SWORD ART ONLINE","SPICE AND WOLF","SKIP BEAT","SAY I LOVE YOU","PRISON SCHOOL","PRINCESS JELLYFISH","PERSONA 4","NISEKOI","MYSTERIOUS GIRLFRIEND X","KISS HIM, NOT ME","JOJO'S BIZARRE ADVENTURE","I AM A HERO","HIGH SCHOOL DXD","FIRE FORCE","DRAGONS RIOTING","DIMENSION W","DEVILS' LINE","DEVIL SURVIVOR","DEMONIZER ZILCH","DEADMAN WONDERLAND","CASE CLOSED","A SILENT VOICE")
+seriesTitles <- str_replace_all(seriesTitles, "[^[:alnum:]]", " ")
+seriesTitlesDense <- gsub( " ","", seriesTitles)
+
+#this function will compare each test element to each test patter and return the successful match
+multiMatch = function(x, patterns, replacements = patterns, fill = NA, ...)
+{
+    stopifnot(length(patterns) == length(replacements))
+    ans = rep_len(as.character(fill), length(x))    
+    empty = seq_along(x)
+    for(i in seq_along(patterns)) {
+        greps = grepl(patterns[[i]], x[empty], ...)
+        ans[empty[greps]] = replacements[[i]]  
+        empty = empty[!greps]
+    }
+    return(ans)
+}
+
+#format the title feature to facilitate comparison
+mostFreqMangas$title <- str_replace_all(mostFreqMangas$title, "[^[:alnum:]]", " ")
+mostFreqMangas$titleDense <- gsub( " ","",mostFreqMangas$title)
+#multiMatch()
+mostFreqMangas$series <- multiMatch(mostFreqMangas$titleDense, 
+                                    seriesTitlesDense, seriesTitles)
+
+#prepare data for visualization
+mostFreqSeries_plot <- mostFreqMangas %>% group_by( series ) %>% 
+    summarise( seriesTotalWks = sum(weekson2016top10)) %>%
+    arrange( seriesTotalWks )
+mostFreqSeries_plot <- mostFreqSeries_plot[34:63,]
+mostFreqSeries_descOrder <- mostFreqSeries_plot$series
+#Visualize the Top 25 Most Frequent Manga Series    
+ggplot(mostFreqSeries_plot, aes(x=series, y=seriesTotalWks)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_x_discrete( limits = mostFreqSeries_descOrder) +
+  ggtitle('Top 25 Most Frequent Manga Series') +
+  xlab('Title') +
+  ylab('count') 
+```
+
+Great, but The New York Times Best Seller's lists are ranked. Shouldn't our result reflect this? The previous visualizations are informative, but do not make a distiction between the ranking. Here we will weight the appearances on the best seller's lists by the order of the ranking and interpret this as a measure of the series' popularity...
+```{r}
+#prepare data where each appearance is weighted by 1/rank. This gives the most credit to #1 rank appearances and the least to #10.
+weightedRankTotal <- allManga2016 %>%
+    group_by( title ) %>% 
+    summarize( weekson2016top10 = n(), sumWeights = sum( 1/rank ) ) %>%
+    mutate( weightedRank = sumWeights/weekson2016top10 )
+
+weightedRankTotal$title <- str_replace_all(weightedRankTotal$title, "[^[:alnum:]]", " ")
+weightedRankTotal$titleDense <- gsub( " ","",weightedRankTotal$title)
+weightedRankTotal$series <- multiMatch(weightedRankTotal$titleDense, 
+                                    seriesTitlesDense, seriesTitles)
+
+weightedRankTotal_plot <- weightedRankTotal %>% group_by( series ) %>% 
+    summarise( weightedRank = sum(weightedRank)) %>%
+    arrange( weightedRank )
+weightedRankTotal_plot <- weightedRankTotal_plot[34:63,]
+weightedRankTotal_descOrder <- weightedRankTotal_plot$series
+    
+ggplot(weightedRankTotal_plot, aes(x=series, y=weightedRank)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_x_discrete( limits = weightedRankTotal_descOrder) +
+  ggtitle('Top 15 Most Popular Manga Series') +
+  xlab('Title') +
+  ylab('count') 
+```
+
+Interesting, from the figure above we can see that the ordering has changed. In the previous figure, 'Tokyo Ghoul' was the most frequently occuring series to have a title holding a position on the best seller's list. However, if we recalculate the ranking such that the occurances are weighted by the relative ranking, we see that, in fact, it is 'One-Punch Man' that had the highest popularity.
+<br><br>
+<img src="opm.png" width="100%" height="100%" />
+
+### References
+
+1. [Working with The New York Times API in R](https://www.storybench.org/working-with-the-new-york-times-api-in-r/)  
+2. [Books API](https://github.com/nytimes/public_api_specs/blob/master/books_api/books_api.md)
+3. [Matching Multiple Strings fxn](https://stackoverflow.com/questions/19747384/create-new-column-in-dataframe-based-on-partial-string-matching-other-column)
