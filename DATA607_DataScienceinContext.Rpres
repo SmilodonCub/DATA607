@@ -1,0 +1,85 @@
+Data Science in Context: Intro to the neuroscience of neural nets
+========================================================
+author: Bonnie Cooper
+autosize: true
+
+
+<img src="NeuralNets.jpg" height="100%" width="100%" />
+
+
+Neural Networks
+====================================
+**Basic Neural Net Template**   
+consists of interconnected nodes organized in layers
+<small>
+* **Input Layer**
+<br>    
+* **Hidden Layer(s)**  
+<br>
+* **Output Layer**
+    
+</small>
+
+***
+<br>
+<br>
+<br>
+<img src="basicNeuralNet.jpeg" height="200%" width="200%" />
+
+
+Feedforward Neural Nets Biological Basis
+====================================
+<small>
+* **Visual Signals propagate forward**
+    + Response properties increase in complexity 
+    + Pathways fork off into functional divisions
+  
+* **Inputs in each layer distribute across 'maps' of visual space**
+    + Receptive fields increase in size in 'higher' layers
+    
+</small>
+
+***
+<br>
+<br>
+<img src="pathways.png" height="130%" width="130%" />
+
+
+....things got increasingly complicated
+========================================================
+<small>
+**Our understanding of visual signal transduction has evolved past a simple feedforward model
+* **Interconnectivity**
+    + feed-forward & feed-back
+    + lateral connections
+    + excitatory/inhibitory
+    + noise
+    + more....
+<br>
+
+
+</small>
+
+***
+<img src="Felleman-Van-Essen-1991.png" height="100%" width="100%" />
+
+
+MASC: Model of Attention in the Superior Colliculus
+========================================================
+<img src="MASC_walkthrough.png" height="100%" width="100%" />
+
+
+
+REFERENCES
+========================================================
+
+**INTERESTING**  
+[From th neuron doctrine to neural networks](http://stephenlarson.net/assets/pdf/Yuste2015NeuronDoctrine.pdf)  
+[Neuron networks and neuroscience-inspired computer vision](https://reader.elsevier.com/reader/sd/pii/S0960982214010392?token=5E2F2323A446B33E46FE6BD837BBEDD4C66CB3E5640E35E6201E9317301D7E2A9DBC79B9611A665AE6B6AC02E6ED2982)  
+[MASC: Model of Attention in the Superior Colliculus](https://www.jneurosci.org/content/jneuro/37/6/1453.full.pdf)  
+
+**IMAGES**  
+[Neural Net 'Art image'](https://www.aitrends.com/neural-networks/accelerating-the-power-of-ai-with-neural-networks/)  
+[Neural Net Schematic image](https://www.kdnuggets.com/2017/10/7-types-artificial-neural-networks-natural-language-processing.html/2)  
+[Pathways image](https://www.frontiersin.org/articles/10.3389/fnint.2016.00037/full)  
+[Visual Hierarchy schematic image](https://science.sciencemag.org/content/255/5043/419)  
