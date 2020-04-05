@@ -1,0 +1,497 @@
+---
+title: "NLP of MLP: My Little Pony text mining"
+output: 
+  html_document:
+    theme: readable
+    highlight: kate
+---
+![](mlp.png)
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Sentiment Analysis of My Little Pony naratives {.tabset .tabset-fade}
+
+### Introduction 
+&nbsp;&nbsp;&nbsp;&nbsp;The following code processes transcripts from the cartoon show [My Little Pony: Friendship is Magic](https://mlp.fandom.com/wiki/My_Little_Pony_Friendship_is_Magic_Wiki). The text data is availible as .csv files on [kaggle.com](https://www.kaggle.com/liury123/my-little-pony-transcript#clean_dialog.csv). There are several .csv files in the data set bundle. However, this demo will only be working with the 'clean_data.csv'. This file contains line-by-line transcripts of the show with each corresponding episode title, writer and character (pony).  
+There are four features in the 'clean_data.csv':  
+
+|    | Feature  | Description                         |
+|----|----------|-------------------------------------|
+| 1. | title    | episode title                       |
+| 2. | writer   | primary writer of the episode       |
+| 3. | pony     | character who delivered dialog line |
+| 4. | dialogue | text line of dialogue               |
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;This demo will follow through the sentiment analysis example code given by chapter 2 in the text ['Text Mining with R'](https://www.tidytextmining.com/sentiment.html). The original code is implemented in the section below 'Sentiment Analysis with Tidy Data'.
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Begin by loading the necessary R libraries and the text data:
+```{r, message=FALSE}
+library( dplyr )
+library( tidyverse )
+library( tidytext )
+library( textdata )
+library( ggplot2 )
+library( RColorBrewer )
+library( wordcloud )
+library( reshape2 )
+```
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;The 'clean_dialog.csv' has been uploaded to the author's github account to facilitate loading into the RStudio environment as an R data.frame:
+```{r}
+mlpURL <- "https://raw.githubusercontent.com/SmilodonCub/DATA607/master/my-little-pony-transcript/clean_dialog.csv"
+mlp_df <- read.csv( mlpURL )
+dim( mlp_df )
+colnames( mlp_df )
+```
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;There are many general purpose text lexicons available, three that will be used here: 'afinn', 'bing' and 'nrc'. Here is a brief look at them:
+```{r, message=F, results="hide"}
+head(get_sentiments( "afinn"))
+head(get_sentiments( "bing"))
+head(get_sentiments( "nrc"))
+```
+<br>
+![](rdash.png) 
+<br><br>  
+
+### Sentiment Analysis with Inner Join
+&nbsp;&nbsp;&nbsp;&nbsp;This section will explore sentiment as a function of narative time for a subset of My Little Pony episodes. How does sentiment vary over the course of episode dialogue?  
+
+&nbsp;&nbsp;&nbsp;&nbsp;First, wrangle the text data to a 'tidy' format:
+```{r}
+episodeLines <- mlp_df %>%
+  group_by( title ) %>% #with respect to episode title:
+  mutate( id = row_number()) %>% #add a new feature 'id' to enumerate each row of text
+  group_by( title, id) %>% #with respect to episode title & line of text(id):
+  summarise( lines = paste(dialog, collapse = "&&")) %>% 
+  #paste all episode lines together delimited by '&&'
+  mutate( lines = str_split( lines, "&&") ) %>%
+  #mutate lines to a list of lines 
+  unnest( lines ) %>% #unnest list of lines to one line per row
+  unnest_tokens(word, lines) #one token/word per line
+head(episodeLines)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;The data is now organized such that each word, or token of text data is given a row with corresponding features for the line identity (id) and the episode title (title). Now perform an inner join with the 'bing' lexicon.
+```{r, message=F}
+#list of first 6 episode title
+first6Episodes <- unique(episodeLines$title)[1:6]
+
+#perform an inner join with the bing lexicon
+pony_sentiment <- episodeLines %>%
+  filter( title %in% first6Episodes ) %>% #subset for the first 8 episodes
+  inner_join(get_sentiments("bing")) %>% #inner join with 'bing' lexicon
+  #for each title, tally the sentiment score of the 
+  #tokens in increments of 10 lines
+  count(title, index = id %/% 10, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+head( pony_sentiment )
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Visualize sentiment over the course of episode narative:
+```{r, warning=F, message=F}
+colourCount = length(unique(pony_sentiment$title))
+mycolors = colorRampPalette(brewer.pal(50, "PuRd"))(colourCount)
+
+ggplot(pony_sentiment, aes(index, sentiment,color='black', fill = title)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~title, ncol = 2, scales = "free_x") +
+  scale_fill_manual( values = mycolors) +
+  labs( title = 'Sentiment Analysis', subtitle="Sentiment across episode trajectory for the first 6 episodes")
+```
+&nbsp;&nbsp;&nbsp;&nbsp;This visualization shows how the narative sentiment changes over the trajectory of each episode.
+<br>
+![](pinky.png)
+<br><br>  
+
+### Comparing Sentiment Lexicons
+&nbsp;&nbsp;&nbsp;&nbsp;There are numerous sentiment lexicons. This compares the performance of three general purpose tidytext lexicons on the same sample text data:
+
+```{r, message=F}
+#combining 2 episodes to have a longer narative to analyze:
+doubleEpisode <- c('A Canterlot Wedding - Part 1', 'A Canterlot Wedding - Part 2')
+#a dataframe for the first episode:
+doubleEpLines1 <- episodeLines %>%
+  filter( title %in% doubleEpisode[1] )
+addlines <- max(doubleEpLines1$id)
+#a dataframe for the second that increments the line 'id'
+doubleEpLines2 <- episodeLines %>%
+  filter( title %in% doubleEpisode[2] ) %>%
+  mutate( id = id + addlines )
+#bind the two episodes to one dataframe
+doubleEpLines <- rbind( doubleEpLines1, doubleEpLines2)
+
+#inner join with 'afinn' and sum sentiment value for every 10 lines
+afinn <- doubleEpLines %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = id %/% 10) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+#inner join with 'bing' and 'nrc' also sum sentiment value for every 10 lines
+bing_and_nrc <- bind_rows(doubleEpLines  %>% 
+                            inner_join(get_sentiments("bing")) %>%
+                            mutate(method = "Bing et al."),
+                          doubleEpLines  %>% 
+                            inner_join(get_sentiments("nrc") %>% 
+                                         filter(sentiment %in% c("positive", 
+                                                                 "negative"))) %>%
+                            mutate(method = "NRC")) %>%
+  count(method, index = id %/% 10, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+#bind afinn, bing, and nrc data then visualize the narative sentiments
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment,color='black', fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y") +
+  scale_fill_manual( values = mycolors[2:4]) +
+  labs( title = 'Sentiment Analysis', subtitle="Sentiment for the same text with 3 different lexicons")
+```
+&nbsp;&nbsp;&nbsp;&nbsp;The general profile of the sentiment data follows the same envelope for the three lexicons (e.g. there is a peak at index 10 for all three data sets). However, there are noticable variations. For instance, the 'nrc' lexicon tends to label text data as more positive than 'afinn' and 'bing'. It is important to know that these subtle differences exist and to note in methods sections which lexicon was used so that analysis and results can be reproduceable.  
+
+&nbsp;&nbsp;&nbsp;&nbsp;This code demonstrates the differences in lexicon sentiment criterion:
+```{r}
+nrc_sent <- get_sentiments("nrc") %>% 
+     filter(sentiment %in% c("positive", 
+                             "negative")) %>% 
+  count(sentiment)
+nrc_ratio <- nrc_sent$n[1]/nrc_sent$n[2]
+
+bing_sent <- get_sentiments("bing") %>% 
+  count(sentiment)
+bing_ratio <- bing_sent$n[1]/bing_sent$n[2]
+ 
+cat( 'The +/- ratio for nrc=', nrc_ratio, 'this < the +/- bing =',bing_ratio)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;The above output demonstrates that overall, the bing lexicon has relatively more negative labels than nrc.
+<br>
+![](Princess_Celestia.png)
+<br><br>
+
+### Most Common Positive & Negative Words
+&nbsp;&nbsp;&nbsp;&nbsp;Performing an inner join to label sentiment with tokens is beneficial. Here the manipulation is used to explore the most frequent positive and negative words that appear in My Little Pony Episodes.
+```{r, message=F}
+bing_word_counts <- episodeLines %>% 
+  group_by( word ) %>% #group with respect to word,
+  summarise( n = n()) %>% #count a total for each words occurance
+  inner_join(get_sentiments("bing")) %>% #join bing sentiments
+  arrange( desc( n )) #arrange in descending order
+head(bing_word_counts)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Visualize the top 15 most frequent positive and negative words.
+```{r, message=F}
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(15,n) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n,color='black', fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip() +
+  scale_fill_manual( values = mycolors[3:4]) +
+  labs( title = 'Most Common Words', subtitle="15 most frequent positive and negative words that appear across all transcripts")
+```
+&nbsp;&nbsp;&nbsp;&nbsp;From the figure above, it is appearant that the most common positive word sentiments make a much larger contribution than the most common negative words....as one would hope for a children's (or for the young at heart) cartoon show.
+
+&nbsp;&nbsp;&nbsp;&nbsp;There is a problem! In the top 10 negative words, 'discord' is listed. This is problematic, because Discord is the name of a villain in My Little Pony. We would like to add this nameto a list of stop words. Stop words are words that are to be excluded from further analysis.
+```{r}
+#add 'discord' to the stop words...
+custom_stop_words <- bind_rows(tibble(word = c("discord"), 
+                                          lexicon = c("custom")), 
+                               stop_words)
+custom_stop_words
+```
+![](discord.png)
+
+### Wordclouds
+&nbsp;&nbsp;&nbsp;&nbsp;Traditional graphs are great for getting a point across, but wordclouds are visually enjoyable and can be quite informative. This code uses functions from wordcloud & wordcloud2 to present the most common words in several different visualizations:
+```{r, message=F, warning=F}
+#basic word cloud
+bing_word_counts %>%
+  anti_join(stop_words) %>%
+  with(wordcloud(word, n, max.words = 80,colors = c("#F592AB","#BF408B","#B040BF","#8340BF")))
+
+```
+
+```{r, message=F}
+#word cloud that compares categorical tokens (positive vs negative sentiments)
+bing_word_counts %>%
+  inner_join(get_sentiments("bing")) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("cyan", "magenta"),
+                   max.words = 100)
+```
+&nbsp;&nbsp;&nbsp;&nbsp;A wordcloud with a custom shape (using wordcloud2)
+```{r, message=F}
+#wordcloud with a custom shape
+library( wordcloud2 )
+plotWords <- bing_word_counts %>%
+  anti_join(custom_stop_words) %>%
+  arrange( desc(n)) %>%
+  top_n( 100,n)
+
+starCloud <- wordcloud2(plotWords, shape='star',size=0.3, color = 'magenta', backgroundColor="skyblue")
+```
+![](starcloud.png)
+<br><br><br>
+
+### The Most Positive Pony
+&nbsp;&nbsp;&nbsp;&nbsp;Which main character in My Little Pony has the most positive sentiment? Here the text data is organized such that lines are grouped by character for the 50 most frequent characters in the cartoon. Additionally, the sentiment is analyzed with a different r library and a different sentiment lexicon: the Syuzhet library is used.
+
+&nbsp;&nbsp;&nbsp;&nbsp;Start by organizing the data:
+```{r}
+ponies_top50 <- mlp_df %>% 
+    group_by( pony ) %>% 
+    summarise( count = n(), lines=paste(dialog, collapse="&&") ) %>% 
+    mutate(lines = str_split( lines, "&&")) %>%
+    arrange( desc( count ) ) %>% 
+    top_n( 50, count ) %>%
+    unnest( lines ) %>%
+    unnest_tokens(word, lines)
+unique(ponies_top50$pony)
+
+ponies_lineTally <- ponies_top50 %>%
+  select( pony, count ) %>%
+  group_by( pony ) %>%
+  summarise( count = max(count) )
+ponies_lineTally
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Use the get_sentiment() function from the syuzhet library to build sentiment scores for 3 lexicons: 'syuzhet', 'bing', and 'nrc'
+```{r}
+library( syuzhet )
+ponies_top50$syuzhet <- get_sentiment(ponies_top50$word, method="syuzhet")
+ponies_top50$bing <- get_sentiment(ponies_top50$word, method="bing")
+ponies_top50$nrc <- get_sentiment(ponies_top50$word, method="nrc")
+```
+Tally the token/word sentiment scores with respect the character (pony)
+```{r}
+#group by pony and summarise the sums of the 3 lexicon scores
+ponies_sentimentScores <- ponies_top50 %>%
+  group_by( pony, count ) %>%
+  summarise( syuzhetScore = sum( syuzhet ),
+             bingScore = sum( bing ),
+             nrcScore = sum( nrc ))
+#normalize the scores to account for the number of lines delivered by each character
+ponies_sentimentScores <- ponies_sentimentScores %>%
+  mutate( syuzhetScore = syuzhetScore/count,
+             bingScore = bingScore/count,
+             nrcScore = nrcScore/count)
+summary( ponies_sentimentScores )
+```
+```{r}
+#pivot the data longer to facilitate plotting the distributions of scores by lexicon
+plotData <- ponies_sentimentScores %>%
+  pivot_longer(cols = syuzhetScore:nrcScore, names_to = 'lexicon')
+#visualize as box plot:
+ggplot(plotData, aes(x=lexicon, y=value)) + 
+  geom_boxplot(color="#8340BF", fill="#BF408B", alpha=0.2,
+               outlier.colour="#B040BF", outlier.fill="#B040BF", outlier.size=5) +
+  labs( title = 'Lexicon Scores Compared:', subtitle="distribution of lexicon scores normalized by lines delivered for top 50 characters")
+```
+&nbsp;&nbsp;&nbsp;&nbsp;From the summary statistics and box plot figure above, we see that median Syuzhet score is higher than the other lexicons, the Bing lexicon in the least variable and the NRC lexicon is the most variable. However, the distributions are heavily overlapping.
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Now to rank the line normalized syuzhet sentiment scores by character to find the most positive ponies:
+```{r, message=F}
+colourCount = 15
+mycolors = colorRampPalette(brewer.pal(50, "PuRd"))(colourCount)
+
+plotData <- ponies_sentimentScores %>%
+  arrange( desc( syuzhetScore )) %>%
+  head( n = 15L )
+ordered <- plotData$pony
+ggplot(plotData, aes(x=pony, y=syuzhetScore, color='black',fill=factor(pony) )) +  
+  geom_bar( stat = 'identity' ) +
+  scale_x_discrete( limits = rev(ordered)) +
+  coord_flip() +
+  scale_fill_manual(values = mycolors ) +
+  theme(legend.position="none") +
+  labs( title = 'Highest Syuzhet Score', subtitle = 'Top 15 ranked character Syuzhet Scores normalized by #lines delivered')
+```
+&nbsp;&nbsp;&nbsp;&nbsp;The figure above plots the top 15 syuzhet sentiment scoring characters with scores normalized by the number of lines delivered. The number of lines delivered was used to normalize the score as a way to qualify how positive each contribution to the narative was. The result is very interesting. Mayer Mare ranks as the most positive character by this scoring system and this makes sense as she plays a maternal role on the show. However, this ranking also rate a villain, Discord, very highly. Perhaps we will have to probe deeper than just single word token sentiments to develop a more sophisticated ranking of positive roles for characters on the show.
+
+![](mayormare.png)
+
+
+## Sentiment Analysis with Tidy Data {.tabset .tabset-fade}
+### Introduction
+
+&nbsp;&nbsp;&nbsp;&nbsp;The following code executes the primary example code for chapter 2 of  [Text Mining with R](https://www.tidytextmining.com/sentiment.html). Please see the text for details and a full walk through of the code. 
+
+&nbsp;&nbsp;&nbsp;&nbsp;This example uses the 'janeaustenr' library to explore sentiment analysis with the works of [Jane Austen](https://en.wikipedia.org/wiki/Jane_Austen)  
+
+```{r}
+library(janeaustenr)
+```
+
+### The sentiments dataset
+```{r, message=F}
+get_sentiments( "afinn" )
+get_sentiments( "bing" )
+get_sentiments( "nrc" )
+```
+### Sentiment analysis with inner join
+```{r, message=F}
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]", 
+                                                 ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  tidytext::unnest_tokens(word, text)
+
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+```{r, message=F}
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+### Comparing the Three Sentiment Dictionaries
+```{r}
+pride_prejudice <- tidy_books %>%
+  filter( book == "Pride & Prejudice")
+head(pride_prejudice)
+```
+```{r, message=F}
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(pride_prejudice %>% 
+                            inner_join(get_sentiments("bing")) %>%
+                            mutate(method = "Bing et al."),
+                          pride_prejudice %>% 
+                            inner_join(get_sentiments("nrc") %>% 
+                                         filter(sentiment %in% c("positive", 
+                                                                 "negative"))) %>%
+                            mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+The ratio ofnegative to positive words is higher in the Bing lexicon than the NRC lexicon; this accounts for the differences in the plots above.
+```{r}
+get_sentiments("nrc") %>% 
+     filter(sentiment %in% c("positive", 
+                             "negative")) %>% 
+  count(sentiment)
+
+get_sentiments("bing") %>% 
+  count(sentiment)
+```
+### Most Common Positive and Negative Words
+```{r, message=F}
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+head(bing_word_counts)
+```
+```{r, message=F}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+```
+Custom stop words:
+```{r}
+custom_stop_words <- bind_rows(tibble(word = c("miss"), 
+                                          lexicon = c("custom")), 
+                               stop_words)
+head(custom_stop_words)
+```
+### Wordclouds
+```{r, message=F}
+tidy_books %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+```{r, message=F}
+tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+### Looking at units beyond just words
+```{r}
+PandP_sentences <- tibble(text = prideprejudice) %>% 
+  unnest_tokens(sentence, text, token = "sentences")
+PandP_sentences$sentence[2]
+```
+```{r}
+austen_chapters <- austen_books() %>%
+  group_by(book) %>%
+  unnest_tokens(chapter, text, token = "regex", 
+                pattern = "Chapter|CHAPTER [\\dIVXLC]") %>%
+  ungroup()
+#summarise number of chapters in each book
+austen_chapters %>% 
+  group_by(book) %>% 
+  summarise(chapters = n())
+```
+what is the most negative chapter?
+```{r, message=F}
+bingnegative <- get_sentiments("bing") %>% 
+  filter(sentiment == "negative")
+
+wordcounts <- tidy_books %>%
+  group_by(book, chapter) %>%
+  summarize(words = n())
+
+tidy_books %>%
+  semi_join(bingnegative) %>%
+  group_by(book, chapter) %>%
+  summarize(negativewords = n()) %>%
+  left_join(wordcounts, by = c("book", "chapter")) %>%
+  mutate(ratio = negativewords/words) %>%
+  filter(chapter != 0) %>%
+  top_n(1) %>%
+  ungroup()
+```
+
+## References
+
+1. [Text Mining with R](https://www.tidytextmining.com/sentiment.html)  
+2. [My Little Pony kaggle.com dataset](https://www.kaggle.com/liury123/my-little-pony-transcript#clean_dialog.csv)  
