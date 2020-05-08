@@ -1,0 +1,112 @@
+---
+title: "Regional Impact of COVID-19 Related Deaths in the US"
+subtitle: "US regional COVID-19 death rates compared to top 10 leading causes of death by county."
+date: "`r Sys.Date()`"
+author: Bonnie Cooper
+output:
+  rmdformats::readthedown:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+---
+![](c19banner.png){ width=100% }
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Abstract
+
+This project analyzes and visualizes regional death rates for COVID19 to make comparisons to the regional death rate statistics for the 10 leading causes of death unrelated to the pandemic. The motivation of this analysis is to make tangible through a series of visualizations the impact that COVID19 has had on different regions of the United States. This analysis will utilize the COVID-19 dataset by USAfacts that aggregates the COVID-19 cases by county from data collected by US health agencies. A comparison with leading causes of death in the US will be made from regional statistics made available from the Center for Disease Control's (CDC) public use database, Wide-ranging ONline Data for Epidemiological Research (WONDER). Through WONDER, the CDC maintains detailed mortality data for many demographic variables. However, for this analysis, WONDER was querried for the top 15 causes of death in the US by county and year (2016-2018).
+
+## Introduction
+
+**The Data**  
+
+1. **COVID-19 by US County:** USAFacts is a non-for-profit organization that cleans, organizes and maintains data on the American population, government and society. USAFacts collates data from various government agencies to present clean and coherent datasets and corresponding visualizations free of charge. In light of the COVID-19 pandemic, USAFacts has been presenting data on confirmed cases and related deaths in the US. This analysis makes use of a dataset unique to USAFacts that organizes the data on a local level with incidences organizes by county with corresponding. Importantly, the data includes the FIPs number for the county; this facilitates comparisons of the dataset with existing government datasets. The USAFacts Coronavirus Locations data set can be found here: [USAFacts.org](https://usafacts.org/issues/coronavirus/). The analysis presented here levies the 'Deaths' and 'County population for population adjustments (2019 Census estimates)' data files.
+
+2. **Leading Causes of Death by US County** The CDC maintains WONDER, a public use database with data for various epidemiological topics. For example, births, vaccinations and mortality data are all open to the public for free access. Mortality data for the the leading deaths by US county was pulled from WONDER. First, the WONDER was querried for the 15 leading causes of death in the US. The resulting text file yielded summary statistics and the corresponding International Classification of Disease (ICD) codes for each of the causes of death. Next, WONDER was manually querried for each of the 15 causes of death to group data by US county and year (2016-2018) for the corresponding ICD codes. 
+
+Notes:
+Looking at mortality data to learn more about the death toll related to illness. Fatality rates are increasingly being used as an indicator of the disease's quieter toll. Experts say there are many people who may have died without ever being tested for the virus  
+<br>
+
+## Data Acquisition
+
+This project will use tidyverse methods to transform data and ggplot2 for basic visualizations. More advanced data representations will use the usmap and gganimate libraries.  
+Load the necessary libraries in to the R evironment:
+```{r, message=F}
+library( tidyverse )
+library( ggplot2 )
+library( usmap )
+library( gganimate )
+```
+
+
+```{r}
+url <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/NCHS_-_Leading_Causes_of_Death__United_States.csv'
+
+df <- read.csv( url, stringsAsFactors = F )
+
+head(df)
+dim( df )
+colnames( df )
+```
+
+```{r}
+url <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/covid_deaths_usafacts.csv'
+
+df2 <- read.csv( url, stringsAsFactors = F )
+
+colnames( df2 )
+dim( df2 )
+```
+
+Basic plot of one county over time
+Basic plot of total counties over time
+Box plot of distribution of counties. and histogram. histogram can be described by poisson process?
+Basic plot of average counties over time
+
+Can other diseases be describes by a Poisson distribution? 
+What can we say from the differences between the distributions?
+Normalize by population. How does this change the distribution?
+
+```{r}
+#to make compatible with plot_usmap, rename column countyFIPS to fips.
+mapDat <- df2 %>%
+  rename( fips = countyFIPS ) %>%
+  select( fips, X5.2.20 ) %>%
+  filter( fips > 0 ) %>%
+  mutate( fips = as.character( fips ) ) %>%
+  mutate( fips = ifelse( nchar( fips ) ==4, paste( '0', fips, sep = ""), fips ) )
+```
+
+```{r}
+#colnames( df2 )
+plot_usmap( regions = "counties", data = mapDat, values = "X5.2.20") +
+  scale_fill_gradientn(colours = rev(rainbow(10)) ) +
+  labs( title = 'Cumulative COVID-19 Deaths by County') +
+  theme( legend.position = "right")
+```
+
+
+## COVID-19 dataset
+
+## Top 10 leading causes of Death
+
+## Comparison of COVID-19 deaths to leading causes of death in th US
+
+## Conclusions
+
+## References
+
+https://cran.r-project.org/web/packages/dsr/vignettes/dsr.html
+https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm
+https://www.nytimes.com/interactive/2020/05/05/us/coronavirus-death-toll-us.html
+https://news.berkeley.edu/2020/04/24/study-challenges-reports-of-low-fatality-rate-for-covid-19/
+https://blog.rstudio.com/2020/04/17/rstudio-and-covid-19/
+
+
+![](c19.jpg){ width=200% }
+
