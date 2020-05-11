@@ -18,20 +18,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Abstract
 
-This project analyzes and visualizes regional death rates for COVID19 to make comparisons to the regional death rate statistics for the 10 leading causes of death unrelated to the pandemic. The motivation of this analysis is to make tangible through a series of visualizations the impact that COVID19 has had on different regions of the United States. This analysis will utilize the COVID-19 dataset by USAfacts that aggregates the COVID-19 cases by county from data collected by US health agencies. A comparison with leading causes of death in the US will be made from regional statistics made available from the Center for Disease Control's (CDC) public use database, Wide-ranging ONline Data for Epidemiological Research (WONDER). Through WONDER, the CDC maintains detailed mortality data for many demographic variables. However, for this analysis, WONDER was querried for the top 15 causes of death in the US by county and year (2016-2018).
+&nbsp;&nbsp;&nbsp;&nbsp;This project analyzes and visualizes regional death rates for COVID19 to make comparisons to the regional death rate statistics for several leading causes of death unrelated to the pandemic. The motivation of this analysis is to make tangible through a series of visualizations the impact that COVID19 has had on different regions of the United States. This analysis will utilize the COVID-19 dataset by USAfacts that aggregates the COVID-19 cases by county from data collected by US health agencies. A comparison with leading causes of death in the US will be made from regional statistics made available from the Center for Disease Control's (CDC) public use database, the Wide-ranging ONline Data for Epidemiological Research (WONDER) database. Through WONDER, the CDC maintains detailed mortality data for many demographic variables. However, for this analysis, the querry of WONDER was limited to the top 15 causes of death in the US by county and year (2016-2018).
 
 ## Introduction
+&nbsp;&nbsp;&nbsp;&nbsp;Coverage of the COVID-19 pandemic has been a leading topic of discussion and generated numerous headlines. One such headline read, "COVID-19 is now the leading cause of death in the United States" on 4/10/20 via [livescience.com](https://www.livescience.com/coronavirus-leading-cause-of-death.html). However, another more recent headline in the [Wall Street Journal](https://www.wsj.com/articles/leading-cause-of-death-in-u-s-hint-it-isnt-covid-19-11588930202) reads "Leading Cause of Death in U.S.? Hint: It Isn't Covid-19". Caught in the middle of conflicting headlines, what is the concerned public to assume is correct?
+&nbsp;&nbsp;&nbsp;&nbsp;The motivation of this analysis is to present numbers and visualizations to clarify the impact that the COVID-19 pandemic has had on the US thus far (the data used in this analysis was updated asrecently as May 8th 2020).
 
 **The Data**  
 
 1. **COVID-19 by US County:** USAFacts is a non-for-profit organization that cleans, organizes and maintains data on the American population, government and society. USAFacts collates data from various government agencies to present clean and coherent datasets and corresponding visualizations free of charge. In light of the COVID-19 pandemic, USAFacts has been presenting data on confirmed cases and related deaths in the US. This analysis makes use of a dataset unique to USAFacts that organizes the data on a local level with incidences organizes by county with corresponding. Importantly, the data includes the FIPs number for the county; this facilitates comparisons of the dataset with existing government datasets. The USAFacts Coronavirus Locations data set can be found here: [USAFacts.org](https://usafacts.org/issues/coronavirus/). The analysis presented here levies the 'Deaths' and 'County population for population adjustments (2019 Census estimates)' data files.
 <br>
-2. **Leading Causes of Death by US County** The CDC maintains WONDER, a public use database with data for various epidemiological topics. For example, births, vaccinations and mortality data are all open to the public for free access. Mortality data for the the leading deaths by US county was pulled from WONDER. First, the WONDER was querried for the 15 leading causes of death in the US. The resulting text file yielded summary statistics and the corresponding International Classification of Disease (ICD) codes for each of the causes of death. Next, WONDER was manually querried for each of the 15 causes of death to group data by US county and year (2016-2018) for the corresponding ICD codes. 
+2. **Leading Causes of Death by US County** The CDC maintains [WONDER](https://wonder.cdc.gov/), a public use database with data for various epidemiological topics. For example, births, vaccinations and mortality data are all open to the public for free access. Mortality data for the the leading deaths by US county was pulled from WONDER. First, the WONDER was querried for the 15 leading causes of death in the US. The resulting text file yielded summary statistics and the corresponding International Classification of Disease (ICD) codes for each of the causes of death. Next, WONDER was manually querried for each of the 15 causes of death to group data by US county and year (2016-2018) for the corresponding ICD codes. 
 <br>
 
 ## Data Acquisition & R Environment
 
-**R Environment:** This project will use tidyverse methods to transform data and ggplot2 for basic visualizations and usmap for spatial representation of county data.  
+**R Environment:** This project will use tidyverse methods to transform data, ggplot2 for basic visualizations and usmap for spatial representation of county data.  
 Load the necessary libraries in to the R evironment:
 ```{r, message=F}
 library( tidyverse )
@@ -41,65 +43,71 @@ library( ggExtra )
 library( usmap )
 ```
 
-**COVID-19 by US County:** This analysis will use two .csv files from USAFact.org: 'covid_deaths_usafacts.csv' and 'covid_county_population_usafacts.csv'. The data files were downloaded from [USAFact.org](https://usafacts.org/issues/coronavirus/) and are made available via the author's github account. The following coad will load the data into the R environment as a data.frame:
+**COVID-19 by US County:** This analysis will use two .csv files from USAFact.org: 'covid_deaths_usafacts.csv' and 'covid_county_population_usafacts.csv'. The data files were downloaded from [USAFact.org](https://usafacts.org/issues/coronavirus/) and are made available via the author's github account. The following code will load the data into the R environment as a data.frame:
 ```{r}
+#URL addresses for data
 COVID_DeathbyCounty_url <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/covid_deaths_usafacts.csv'
 COVID_CountyPop_url <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/covid_county_population_usafacts.csv'
-
+#use URL to read data to R data.frames
 COVID_DeathbyCounty_df <- read.csv( COVID_DeathbyCounty_url, stringsAsFactors = F )
 COVID_CountyPop_df <- read.csv( COVID_CountyPop_url, stringsAsFactors = F )
 ```
 
-**Leading Causes of Death by US County** Queries to address this analysis were made to the CDC's WONDER database. Output from WONDER was formated as .txt files and is made available via the author's githut account. There is one .txt file with summary statistics and ICD codes for the 15 leading causes of death in the US for the year 2018. An additional 15 .txt files are the result of WONDER queries for each leading cause of death's ICD code(s) grouped by county and year for the years 2016-2018. The following code will load the leading causes of death data into the R environment as a data.frame:
+**Leading Causes of Death by US County** Queries to address this analysis were made to the CDC's WONDER database. Output from WONDER was exported as .txt files and is made available via the author's github account. There is one .txt file with summary statistics and ICD codes for the 15 leading causes of death in the US for the year 2018. An additional 15 .txt files are the result of WONDER queries for each leading cause of death's ICD code(s) grouped by county and year for the years 2016-2018. Three recent years were pulled in an effort to get mortality data estimates for an many counties as possible. The following code will load the leading causes of death data into the R environment as a data.frame:
 ```{r}
+#URL for datafile
 top15Diseases_URL <- 'https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/Top15_US2018.txt'
+#read to an R data.frame
 top15Diseases <- data.frame(read.delim( top15Diseases_URL, sep = "\t", header = T ))
-top15Diseases <- top15Diseases[1:15,]
-names( top15Diseases ) <- c("rowNum", "Causes", "GRCode", "Deaths","Population", "CrudeRate")
+top15Diseases <- top15Diseases[1:15,] #select the 15 rows of text that hold data of interest
+names( top15Diseases ) <- c("rowNum", "Causes", "GRCode", "Deaths","Population", "CrudeRate") #name columns
 top15Diseases <- top15Diseases %>%
-  select( -rowNum, -GRCode )
-top15Diseases
+  select( -rowNum, -GRCode ) #exclude unnecessary rows
+#display sample of top15Disease data.frame
+head(top15Diseases)
 ```
 <br>The above data.frame gives total deaths and national mortality rates for the top 15 leading causes of death in the US according to the CDC. This table was referenced to query WONDER for mortality statistics grouped by year and county for all counties and the years 2016-2018. The information above was necessary to reference the ICD codes for each top cause of death (alphanumerics in parentheses in the feature `Causes`).
 
 The following code will access the WONDER query results: text files for each leading cause of death with three years of data for each US county
 ```{r, warning=F}
+#filenames for query results text files
 fileNames <- c("Accidents.txt", "Alzheimer.txt", "ChonicLowerResp.txt", "Diabetes.txt", "Heart.txt",
                "Hypertension.txt", "InfluenzaPneumonia.txt", "Kidney.txt", "Liver.txt", "Overall.txt",
                "Parkinson.txt", "Pneumonitis.txt", "Septicemia.txt", "Stroke.txt", "malNeoplasms.txt",
                "selfHarm.txt")
+#stem address for author's github
 gitStem <- "https://raw.githubusercontent.com/SmilodonCub/DATA607/master/DATA607_finalProject/"
-
+#initialize a data.frame with appropriate column names
 leadingCausesbyCounty_df <- data.frame(fips=numeric(),
                  Deaths=numeric(), 
                  Population=numeric(), 
                  Crude.Rate=numeric(),
                  Cause=numeric(),
                  stringsAsFactors=FALSE) 
-
+#A for loop to read in each text file, extract data, format the data and add tothe data.frame
 for (afile in seq(1,length(fileNames))){
 fileURL <- paste0(gitStem,fileNames[afile])
 disLabel <- str_remove(fileNames[afile],".txt")
-df <- data.frame(read.delim( fileURL, sep = "\t", header = T ))
+df <- data.frame(read.delim( fileURL, sep = "\t", header = T )) #read a text file to a data.frame
 df <- df %>%
-  select( -Notes, -Year.Code, -County ) %>%
-  filter( County.Code != 'NA') %>%
+  select( -Notes, -Year.Code, -County ) %>% #deselect irrelevant features
+  filter( County.Code != 'NA') %>% #filter out 'NA' county codes
   mutate_if(is.factor, as.character) %>%
   mutate( Deaths = na_if( Deaths, "Suppressed"),
           Deaths = na_if( Deaths, "Missing"),
           Crude.Rate = na_if( Crude.Rate, "Suppressed"),
           Crude.Rate = na_if( Crude.Rate, "Unreliable"),
-          Crude.Rate = na_if( Crude.Rate, "Missing")) %>%
-  rename( fips = County.Code ) %>%
+          Crude.Rate = na_if( Crude.Rate, "Missing")) %>% #filter out records with poor format
+  rename( fips = County.Code ) %>% #rename countycode to work with usmap
   mutate( fips = as.character( fips ) ) %>%
-  mutate( fips = ifelse( nchar( fips ) ==4, paste( '0', fips, sep = ""), fips ) ) %>%
+  mutate( fips = ifelse( nchar( fips ) ==4, paste( '0', fips, sep = ""), fips ) ) %>% #some fips numbers need a '0' added in front. usmap requires character of length 5 for county
   mutate_if(is.character, as.numeric) %>%
-  group_by( fips ) %>%
+  group_by( fips ) %>% #group by fips county number and get the best estimates the data will allow
   summarise( Deaths = mean( Deaths, na.rm = T), 
              Population = mean( Population, na.rm = T),
              Crude.Rate = mean( Crude.Rate, na.rm = T)) %>%
   mutate( Cause = disLabel )
-  leadingCausesbyCounty_df <- rbind(leadingCausesbyCounty_df, df)
+  leadingCausesbyCounty_df <- rbind(leadingCausesbyCounty_df, df) #rbind the data.frame to the big guy.
 }
 ```
 
@@ -107,6 +115,7 @@ df <- df %>%
 ## COVID-19 by US County: exploration & Analysis
 Explore the USAFacts COVID-19 Deaths by US County & County Population data frames through a series of visualizations.  
 <br>
+
 ### Total Deaths per US County
 First, Explore the basic structure of the `COVID_DeathbyCounty_df` data.frame:
 ```{r}
@@ -118,27 +127,27 @@ dim( COVID_DeathbyCounty_df )
 From the output above, this data.frame holds 3195 records, one for each US county. Aside from the features that hold label information (countyFIPS, Count.Name, State and stateFIPS), there is a column that holds the cumulative deaths in a county for each successive day starting with January 22nd 2020 through to May 8th 2020. This represents the most complete version of the data from USAFacts at the time of this analysis. However, more recent data may be accessed directly via USAFacts.org.  
 
 Next, examine the summary statistics and visualize the distribution of cumulative deaths by US county for the last column (most recent date) in the data.frame `COVID_DeathbyCounty_df`:
-```{r, warning=F}
+```{r, warning=F, message=F}
 fillcolor <- 'slateblue'
 total5820 <- COVID_DeathbyCounty_df %>%
-  filter( County.Name != 'Statewide Unallocated') %>%
-  select( X5.8.20 )
+  filter( County.Name != 'Statewide Unallocated') %>% #make sure it has an acceptable fips
+  select( X5.8.20 ) #select May 8th totals
 p1 <- ggplot( total5820, aes(y=X5.8.20) ) +
-  geom_boxplot(fill = fillcolor, alpha = 0.2) +
-  #coord_cartesian( ylim= c(0,20)) +
-  scale_y_log10() +
+  geom_boxplot(fill = fillcolor, alpha = 0.2) + #boxplot of the data
+  scale_y_log10() + #log axis
   xlab( "US Counties") +
   ylab( "#Deaths (log10)") +
   labs( title="Boxplot: Deaths by US County")
-p2 <- ggplot( total5820, aes(x=X5.8.20)) +
+p2 <- ggplot( total5820, aes(x=X5.8.20)) + #Plot a histogram
   geom_histogram( binwidth = 20, fill=fillcolor) +
-  #scale_y_log10() +
   coord_cartesian( xlim= c(0,250)) +
   ylab( "Count") +
   xlab( "Total Deaths") +
   labs( title = "Histogram: Deaths by US Counties")
+#display both plots
 grid.arrange(p1, p2, nrow = 1)
 
+#find and display the 15 counties with the most deaths in the US
 top15Counties_deaths <- COVID_DeathbyCounty_df %>%
   filter( County.Name != 'Statewide Unallocated', County.Name != 'New York City Unallocated/Probable') %>%
   arrange( desc(X5.8.20)) %>%
@@ -146,13 +155,14 @@ top15Counties_deaths <- COVID_DeathbyCounty_df %>%
   select( County.Name, State, X5.8.20 )
 maxDeaths <- max(top15Counties_deaths$X5.8.20 )
 top15Counties_deaths
-
 ```
 ```{r}
+#display summary statistics of county reported COVID19 deaths
 sum5820 <- summary( total5820 )
 sum5820
 ```
-From the basic summary statistics and the plots above, it can be concluded that the distribution of cummulative deaths by US county is skewed heavily to the right. The majority of counties report 0 or very few deaths (Median: 0) while a tail with extreme outliers (Max: 5542.0) shifts the mean value to the right (Mean: 23.99). The data is far from a normal distribution, but perhaps it can be described as a Poisson distribution?
+
+From the basic summary statistics and the plots above, it can be concluded that the distribution of cummulative deaths by US county is skewed heavily to the right. The skew is so severe, that the y-axis must be rescaled as a log10 plot to visualize the 'box' in the boxplot. The majority of counties report 0 or very few deaths (Median: 0) while a tail with extreme outliers (Max: 5542.0) shifts the mean value to the right (Mean: 23.99). The data is far from a normal distribution, but perhaps it can be described as a Poisson distribution?
 <br>
 How to interpret this distribution? This distribution shows that for the vast majority of US counties, the cumulative deaths as of May 8th 2020 are non-existant or very low. However, there are a relatively few number of counties with very high number of deaths.
 
@@ -168,6 +178,7 @@ mapDat <- COVID_DeathbyCounty_df %>%
 myColors <- c("#0066FFFF", "#00CCFFFF", 
               "#00FFCCFF", "#00FF66FF", "#00FF00FF", "#66FF00FF", "#CCFF00FF",
               "#FFCC00FF", "#FF6600FF", "#FF0000FF")
+#usmap to display death totals for counties
 p1 <- plot_usmap( regions = "counties", data = mapDat, values = "X5.8.20", color = "#0066FFFF") +
   scale_fill_gradientn(name='Total Deaths',colours = myColors, limits = c(0,maxDeaths) ) +
   labs( title = 'USA: COVID-19 Deaths', subtitle = 'Cummulative deaths per US county as of 5/8/2020') +
@@ -176,11 +187,10 @@ p2 <- plot_usmap( regions = "counties", include = .northeast_region ,data = mapD
   scale_fill_gradientn(name='Total Deaths', colours = myColors, limits = c(0,maxDeaths) ) +
   labs( title = 'NorthEast: COVID-19 Deaths', subtitle = 'Cummulative deaths per NorthEast county as of 5/8/2020') +
   theme( legend.position = "right")
-p1
-p2
+grid.arrange(p1, p2, nrow = 2)
 ```
 <br>
-The figures above demostrate the earlier finding clearly: The vast majority of US counties report very low incidences of cases. However, for several counties, the death are much higher.
+The figures above demostrate the earlier finding clearly: The vast majority of US counties report very low incidences of COVID-19 fatalities. However, for several counties, the death are significantly much higher.
 
 Next, examine the `COVID_CountyPop_df` data.frame:
 ```{r}
@@ -189,6 +199,7 @@ colnames( COVID_CountyPop_df )
 ```{r}
 dim( COVID_CountyPop_df )
 ```
+
 This data.frame holds 3195 records, one record for each US county. Most features carry categorical identification information (e.g. fips numbers). However, the feature `population`, carries numerical data with the 2019 census estimates for population in each county.
 
 Visualize the population data:
@@ -196,25 +207,25 @@ Visualize the population data:
 COVID_CountyPop_df <- COVID_CountyPop_df %>%
   rename( countyPop = population )
 
+#visualize the distribution as a box & histogram
 pop <- COVID_CountyPop_df %>%
   filter( County.Name != 'Statewide Unallocated') %>%
   select( countyPop )
 p1 <- ggplot( pop, aes(y=countyPop) ) +
   geom_boxplot(fill = fillcolor, alpha = 0.2) +
-  #coord_cartesian( ylim= c(0,20)) +
   scale_y_log10() +
   xlab( "US Counties") +
   ylab( "Population (log10)") +
   labs( "Boxplot: US County Populations")
 p2 <- ggplot( pop, aes(x=countyPop)) +
   geom_histogram( binwidth=2000, fill=fillcolor) +
-  #scale_y_log10() +
   coord_cartesian( xlim= c(0,100000)) +
   ylab( "Count" ) +
   xlab( "Population" ) +
   labs( "Histogram: US County Populations")
 grid.arrange(p1, p2, nrow = 1)
 
+#display the most populous counties in the US
 top15Counties_pop <- COVID_CountyPop_df %>%
   filter( County.Name != 'Statewide Unallocated', County.Name != 'New York City Unallocated/Probable') %>%
   arrange( desc(countyPop)) %>%
@@ -223,6 +234,7 @@ top15Counties_pop <- COVID_CountyPop_df %>%
 maxPop <- max(top15Counties_pop$countyPop )
 top15Counties_pop
 
+#visualize county population with usmap methods
 popmapDat <- COVID_CountyPop_df %>%
   rename( fips = countyFIPS ) %>%
   filter( County.Name != 'Statewide Unallocated') %>%
@@ -235,8 +247,7 @@ p2 <- plot_usmap( regions = "counties", include = .northeast_region ,data = popm
   scale_fill_gradientn(name='County Population', colours = myColors, limits = c(0,maxPop) ) +
   labs( title = 'NorthEast: Population by County') +
   theme( legend.position = "right")
-p1
-p2
+grid.arrange(p1, p2, nrow = 2)
 ```
 <br>
 The figures above show that, similar to the COVID-19 data, the distribution of population by county is heavily skewed to the right. Additionally and perhaps unsurprisingly, there is a remarkable similarity to the spatial distribution of the densely population counties and the counties with a high incidence of COVID-19 deaths.
@@ -260,17 +271,20 @@ The figure shows no obvious linear trend between death totals and population. Ho
 $\frac{Deaths occurring during a given time period}{Size of the population among which
 the deaths occurred}\ x 10^n$
 
-Calculate and visualize a cause-specific mortality fate for COVID-19 deaths by county:
+The following will calculate a conditional Mortality Rate for COVID-19 by county. The mortality will use the total death as of this analysis (May 8th 2020) with the understanding and acknowledgement that the rate will change. The rate will represent a temporary and conservative estimate mortality as the pandemic is still underway and mortalities past and present have yet to be reported. 
+
+This code will Calculate and visualize a cause-specific mortality rate for COVID-19 deaths by county:
 ```{r, message=F, warning=F}
 countyMortality <- COVID_DeathbyCounty_df %>%
-  mutate( countyPop = COVID_CountyPop_df$countyPop ) %>%
+  mutate( countyPop = COVID_CountyPop_df$countyPop ) %>% #add a column with county population data
   filter( County.Name != 'Statewide Unallocated', County.Name != 'New York City Unallocated/Probable') %>%
   select( countyPop, X5.8.20, countyFIPS, County.Name, State ) %>%
-  mutate( mortRate = X5.8.20/countyPop*100000) %>%
+  mutate( mortRate = X5.8.20/countyPop*100000) %>% #calculate a crude mortality rate
   rename( fips = countyFIPS) %>%
   mutate( fips = as.character( fips ) ) %>%
-  mutate( fips = ifelse( nchar( fips ) ==4, paste( '0', fips, sep = ""), fips ) )
+  mutate( fips = ifelse( nchar( fips ) ==4, paste( '0', fips, sep = ""), fips ) ) #fips has to be properly formatted for usmaps methods
 
+#which counties have the highest mortalities?
 top15Counties_mort <- countyMortality %>%
   arrange( desc(mortRate)) %>%
   top_n( 15 ) %>%
@@ -278,20 +292,20 @@ top15Counties_mort <- countyMortality %>%
 top15Counties_mort
 maxMort <- max(top15Counties_mort$mortRate)
 
+#plot the distribution of mortality rates
 p1 <- ggplot( countyMortality, aes(y=mortRate) ) +
   geom_boxplot(fill = fillcolor, alpha = 0.2) +
-  #coord_cartesian( ylim= c(0,20)) +
   scale_y_log10() +
   xlab( "US Counties") +
   ylab( "COVID-19 Mortality per 100k (log10)")
 p2 <- ggplot( countyMortality, aes(x=mortRate)) +
   geom_histogram( binwidth = 5, fill=fillcolor) +
-  #scale_y_log10() +
   coord_cartesian( xlim= c(0,200)) +
   ylab( "Count" ) +
   xlab( "COVID-19 Mortality per 100k" )
 grid.arrange(p1, p2, nrow = 1)
 
+#usmap plot of mortality rates
 mortmapDat <- countyMortality %>%
   select( fips , mortRate )
 p1 <- plot_usmap( regions = "counties", data = mortmapDat, values = "mortRate", color = "#0066FFFF") +
@@ -312,6 +326,7 @@ p3
 ```
 <br>
 The following code will generate a series of .png images to visualize the mortality by county for each date in the dataset. These images can be used to create an animation of the spread of COVID-19.
+The code is available here, but does not execute in this document. Rather the images were collated as a .gif outside of the RStudio environment.
 ```{r, message=F}
 allCountyMortality <- COVID_DeathbyCounty_df %>%
   mutate( countyPop = COVID_CountyPop_df$countyPop ) %>%
@@ -359,17 +374,19 @@ for (pic in seq(1,length(dateColNames))){
 
 ### COVID-19 by County Summary  
 &nbsp;&nbsp;&nbsp;&nbsp;This brief overview of the USAFacts COVID-19 Deaths by US County data set has illustrated a very powerful point about the nature of the US COVID-19 pandemic: The impact has not be felt equally across the county. The heavily right scewed distribution of cases per county (as of 5/8/20) shows that a relatively few out of many US counties have been hit particularly hard by the pandemic while the vast majority of counties have either reported no or a very small incidence of deaths.  
-&nbsp;&nbsp;&nbsp;&nbsp;When only the total number of deaths per county are analyzed, the impact appears isolated to a few urban centers. For instance, the top 15 ranked counties by total number of deaths are all urban counties in major US cities New York City, Chicago, Los Angeles, Boston or counties within densely populated megalopolies. This information is critical for action against the pandemic, because quantifies the overall impact and signifies the need for supplies to these heavily hit counties. However, a drawback to limiting the understanding to a sum of Death statistics is that, in not taking population density into acount, it gives the misleading impression COVID-19 is not penetrating less populous regions.  
+&nbsp;&nbsp;&nbsp;&nbsp;When only the total number of deaths per county are analyzed, the impact appears isolated to a few urban centers. For instance, the top 15 ranked counties by total number of deaths are all urban counties in major US cities New York City, Chicago, Los Angeles, Boston or counties within densely populated megalopolies. This information is critical for action against the pandemic, because it quantifies the overall impact and signifies where the need for supplies should be diverted to these heavily hit counties. However, a drawback to a total of death visualization is that, in not taking population density into acount, it gives the misleading impression COVID-19 is not penetrating less populous regions.  
 &nbsp;&nbsp;&nbsp;&nbsp;Analyzing the data as a mortality rate (e.g. deaths per 100k people) shifts the perspective. In this analysis, crude mortality data was calculated as total cases from pandemic onset to May 8th 2020 divided by the most recent population estimate (from the 2019 census). On the one hand, many of the counties that had the highest rates we also counties with the highest total counts (e.g. NY's Kings and Queens County); this illustrates that even when population is factored in to the amount of deaths, Broolyn and Queens are exceptionally high mortalities. However, when county population is considered, the mortality rate reveals several other counties that have been relatively hard hit. For example, the county that was found to have the highest crude mortality rate is Randolph County, Georgia with 21 deaths and a small population of only 6778 people. Several other small rural counties from Georgia were similarly ranked as having high Mortality rates. This information is equally powerful to understanding the spread of COVID-19 across the US: while the total deaths in a county is informative from a perspective of where to allocate resources to address immediate impacts, the distribution of mortality rates lends to understanding that even less populous counties are impacted by the virus and that protective measures should be maintained and remain in place irrespective of population.
 
 ## Top 10 leading causes of Death
+And now to shift focus to the second data source.
 Visualize and analyze the leading causes of death by US county.
 
-### Nationaly Incidence of Death and Mortality rates.
+### National Incidence of Death and Mortality rates.
 National Mortality Rates for the top 15 Leading Causes of Death in the US:
 ```{r, warning=F, message=F}
-top15Diseases$Causes <- str_extract( top15Diseases$Causes, '[A-Z].*[a-z]')
+top15Diseases$Causes <- str_extract( top15Diseases$Causes, '[A-Z].*[a-z]') #clear the Causes feature text
 
+#bar plots for total deaths by leading diseases and mortality rates for leading diseases
 p1  <- ggplot( top15Diseases, aes( x=reorder(Causes,Deaths), y = Deaths, fill=Causes)) +
   geom_bar(stat = "identity" ) +
   scale_fill_manual( values = rainbow(15)) +
@@ -391,7 +408,7 @@ p2  <- ggplot( top15Diseases, aes( x=reorder(Causes,CrudeRate), y = CrudeRate, f
 grid.arrange(p1, p2, nrow = 2)
 ```
 <br>
-The figures above reflect nationwide statistics about the leading causes of death. Diseases of the Heart and Malignant neoplasms both cause numbers of deaths and crude mortality rates that are much higher than the other leading causes of disease. 
+The figures above reflect nationwide impact of the leading causes of death. Diseases of the Heart and Malignant neoplasms both cause numbers of deaths and crude mortality rates that are much higher than the other leading causes of disease. 
 <br>
 Next, visualize how the numbers of deaths and mortality rates vary across the US by county for a few of the leading causes of death: Diseases of the Heart, Malignant neoplasms, Accidents and Influenza
 
@@ -549,8 +566,7 @@ grid.arrange(p3, p4, nrow = 2)
 <br>
 
 ## Comparison of COVID-19 deaths to leading causes of death in th US
-&nbsp;&nbsp;&nbsp;&nbsp;Coverage of the COVID-19 pandemic has been a leading topic of discussion and generated numerous headlines. One such headline read, "COVID-19 is now  the leading cause of death in the United States" on 4/10/20 via [livescience.com](https://www.livescience.com/coronavirus-leading-cause-of-death.html). However, another more recent headline in the [Wall Street Journal](https://www.wsj.com/articles/leading-cause-of-death-in-u-s-hint-it-isnt-covid-19-11588930202) reads "Leading Cause of Death in U.S.? Hint: It Isn't Covid-19". Caught in the middle of conflicting headlines, what is the concerned public to assume is correct?
-&nbsp;&nbsp;&nbsp;&nbsp;The motivation of this analysis in this section is to present numbers and visualization to clarify the impact that the COVID-19 pandemic has had on the US thus far (the data used in this analysis was updated asrecently as May 8th 2020). Below is a table published in a recent new article from [The Becker's Hospital Review](https://www.beckershospitalreview.com/public-health/covid-19-is-3rd-leading-cause-of-death-stat-analysis-suggests.html) suggesting that COVID-19 is, as of May 1st 2020, the 3rd leading cause of death in the US (see table below). The following analysis will expand on this finding by comparing County COVID-19 death statistics to know statistics for leading causes of death in US counties.
+&nbsp;&nbsp;&nbsp;&nbsp;Below is a table published in a recent new article from [The Becker's Hospital Review](https://www.beckershospitalreview.com/public-health/covid-19-is-3rd-leading-cause-of-death-stat-analysis-suggests.html) suggesting that COVID-19 is, as of May 1st 2020, the 3rd leading cause of death in the US (see table below). The following analysis will expand on this finding by comparing County COVID-19 death statistics to know statistics for leading causes of death in US counties.
 
 
 |     Disease    |  Annual Death Toll  |
@@ -563,7 +579,7 @@ grid.arrange(p3, p4, nrow = 2)
 | Drug Overdoses |        29,265       |
 |     Suicide    |        19,583       |
 
-&nbsp;&nbsp;&nbsp;&nbsp;Visualize national death totals and mortality rates for COVID-19 and the leading causes of death in the US for comparison. It is important to point out that the death rates calculated for COVID19 here are provisional and only reflect the deaths as of 5/8/20 whereas the statistics for the National leading causes of death are derived from 2018 data and account for an entire years worth of data. It is also important to consider that COVID-19 is a novel disease and might not be near peak infection and/or mortality rate in the US yet. It is important to cautiously qualify the visualizations with this in mind.
+&nbsp;&nbsp;&nbsp;&nbsp;Next, visualize national death totals and mortality rates for COVID-19 and the leading causes of death in the US for comparison. It is important to point out that the death rates calculated for COVID19 here are provisional and only reflect the deaths as of 5/8/20 whereas the statistics for the National leading causes of death are derived from 2018 data and account for an entire years worth of data. It is also important to consider that COVID-19 is a novel disease and might not be near peak infection and/or mortality rate in the US yet. It is important to cautiously qualify the following visualizations with this in mind.
 
 The data table above ranks COVID-19 as the 3rd leading cause based on the **projected** number of deaths. The next visualization shows where COVID-19 ranks with the most current death statistics:
 ```{r}
@@ -596,11 +612,11 @@ grid.arrange(p1, p2, nrow = 2)
 <br>
 The visualization above shows the impact that COVID-19 has had on deaths in the US as of 5/8/20. This shows that if deaths were to hold at a standstill from the May 8th tally, that COVID-19 deaths rank 8th amongst the leading causes of death nationally, above influenza and below Diabetes. Unfortunately, it remains to be seen that the annual total for COVID-19 deaths will eventually be. Will the numbers surpass heart diseases and cancer?
 
-Nationally, COVID-19 currently ranks 8th among leading causes of disease in the US. However, the mapped visualizations of COVID-19 demostrated that COVID-19 does not evenly effect US counties. The next series of visualizations demonstrate counties where COVID-19 is, in fact, currently ranked higher as a leading cause of death.
+COVID-19 currently ranks 8th among leading causes of disease in the US when compared here against national mortality rates. However, the mapped visualizations of COVID-19 demostrated that COVID-19 does not evenly effect US counties. The next series of visualizations demonstrate counties where COVID-19 is, in fact, currently ranked higher as a leading cause of death.
 How have county COVID-19 mortality rates progressed over time compared to national mortality rates for leading causes of disease?:
-```{r}
+```{r, message=F}
+#plot a messy line scatter plot to visualize the number of counties the cross leading disease thresholds
 MonthLabels <- c( 'Jan','Feb', 'Mar', 'Apr', 'May8' )
-
 progressionCOVID <- allCountyMortality %>%
   select(fips, X1.31.20, X2.29.20, X3.31.20, X4.30.20, X5.8.20) %>%
   rename(January=X1.31.20, February=X2.29.20, March=X3.31.20, April=X4.30.20, May8th=X5.8.20) %>%
@@ -629,7 +645,7 @@ p1 <- ggplot(progressionCOVID, aes(x=monthNum, y=mortRate, group=fips, color='da
 p1
 ```
 <br>
-The figure above plots the monthly progression of crute mortality rate (total deaths/population*100k). There are a few thousand counties worth of data plotted on the same axis, but the point is clear. For many counties, the current mortality rate, with only several months worth of deaths to base a sum on, already excedes the mortality rate for Accidents. For a handful of counties, however, the mortality rate has already surpassed the annual national mortality rate for Cancer and Heart Disease.
+The figure above plots the monthly progression of crute mortality rate (total deaths/population*100k). There are a few thousand counties worth of data plotted on the same axis. The figure is not, but the point is clear: for many counties, the current mortality rate, with only several months worth of deaths to base a sum on, already excedes the mortality rate for Accidents. For a handful of counties, however, the mortality rate has already surpassed the annual national mortality rate for Cancer and Heart Disease.
 
 Which counties have mortality rates greater than the national Heart Disease Rate?
 ```{r}
@@ -707,12 +723,23 @@ p1
 
 ## Conclusions
 
+* From the COVID-19 death totals reported from counties: The vast majority of US counties report very low incidences of COVID-19 fatalities. However, for several counties, the death are significantly much higher.
+* While the total deaths in a county is informative from a perspective of where to allocate resources to address immediate impacts, the distribution of mortality rates lends to understanding that even less populous counties are impacted by the virus.
+* The representation of death totals by county reveals a similar and predictable trend as seen with the COVID-19: more densely populated regions have a higher incidence of deaths due to a given disease. 
+* The mortality rates for leading causes of death affect more counties and in a relatively even manor in comparison to COVID-19 as of May 8th 2020.
+* For many counties, the current mortality rate, with only several months worth of deaths to base a sum on, already excedes the mortality rate for many of the leading causes of disease in the US.
 
-## References
-https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm
-https://www.nytimes.com/interactive/2020/05/05/us/coronavirus-death-toll-us.html
-https://news.berkeley.edu/2020/04/24/study-challenges-reports-of-low-fatality-rate-for-covid-19/
-https://blog.rstudio.com/2020/04/17/rstudio-and-covid-19/
+
+## References  
+
+1. [livescience.com](https://www.livescience.com/coronavirus-leading-cause-of-death.html)
+2. [Wall Street Journal](https://www.wsj.com/articles/leading-cause-of-death-in-u-s-hint-it-isnt-covid-19-11588930202)
+3. [USAFacts.org](https://usafacts.org/issues/coronavirus/)
+4. [CDC's WONDER](https://wonder.cdc.gov/)
+5. [The Becker's Hospital Review](https://www.beckershospitalreview.com/public-health/covid-19-is-3rd-leading-cause-of-death-stat-analysis-suggests.html)
+6. [NYT Coronavirus Deathtoll](https://www.nytimes.com/interactive/2020/05/05/us/coronavirus-death-toll-us.html)
+7. [Berkeley News COVID19 fatality rates](https://news.berkeley.edu/2020/04/24/study-challenges-reports-of-low-fatality-rate-for-covid-19/)
+
 
 
 
