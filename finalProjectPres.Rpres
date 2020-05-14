@@ -1,0 +1,117 @@
+COVID-19 by US county
+========================================================
+author: Bonnie Cooper
+autosize: true
+
+How does mortality compare across US counties?  
+How does the impact of COVID-19 compare to other leading causes of death?
+
+<img src="c19banner.png" height="100%" width="100%" />
+
+Motivation for this Project:
+====================================
+What to believe? ... 
+conflicting news headlines
+<small>
+<br>
+<img src="story1.png" height="200%" width="200%" />
+    
+</small>
+
+***
+<br>
+<br>
+<img src="story2.png" height="200%" width="200%" />
+
+
+The Data
+====================================
+
+<img src="USAFacts_logo.jpeg" height="40%" width="40%" />  
+**USAFacts.org**  
+<small>
+* COVID-19 related deaths by US County
+* US population by US County
+    
+</small>
+
+***
+<img src="CDC_logo.png" height="40%" width="40%" />  
+**The CDC** 
+<small>
+* WONDER database query:
+  + top 15 leading causes of death
+  + each leading cause of death by county
+</small>
+
+USAFacts COVID-19 deaths by US County
+========================================================
+<small>  
+Representing the data as # Fatalities 
+<img src="deathDistro.png" height="75%" width="75%" />
+
+
+|  Median |    0.00   |
+|   Mean  |   24.26   |
+|   Max   | 5902.00   |
+
+
+
+
+***
+  
+Representing the data as Mortality Rates 
+
+<br><br>
+<img src="https://i.imgur.com/673CMT0.gif" height="200%" width="200%" />
+
+</small>
+
+CDC: Leading Causes of Deaths by US County
+========================================================
+<img src='leadingCauseNat.png' height="100%" width="100%" />
+***
+<img src="HeartDiseaseNE.png" height="100%" width="100%" />
+
+
+Comparing COVID-19 to Leading Causes of Death
+========================================================
+<br>
+
+|     Disease    |  Annual Death Toll  |
+|:--------------:|---------------------|
+|  Heart Disease |       269,583       |
+|     Cancer     |       252,500       |
+|    COVID-19    | 88,217 to 293,381   |
+|     Stroke     |        60,833       |
+|   Alzheimer's  |        50,417       |
+| Drug Overdoses |        29,265       |
+|     Suicide    |        19,583       |
+
+<small> 
+source: news.berkeley.edu
+</small>
+***
+<img src='compareNat.png' height="100%" width="100%" />
+
+
+Comparing COVID-19 to Leading Causes of Death
+========================================================
+<img src="Progression.png" height="100%" width="100%" />
+***
+<img src="NEDiffPlot.png" height="100%" width="100%" />
+
+
+Conclusions
+========================================================
+<small>
+* The vast majority of US counties report very low incidences of COVID-19 fatalities. However, for several counties, the death are significantly much higher.
+* The distribution of mortality rates lends to understanding that even less populous counties are impacted by the virus.
+* The mortality rates for leading causes of death affect more counties and in a relatively even manor in comparison to COVID-19 (as of May 8th 2020).
+* For many counties, the current mortality rate, with only several months worth of deaths to base a sum on, already excedes the mortality rate for several of the leading causes of disease in the US.
+
+**FUTURE DIRECTIONS:** There is a positive trend for the COVID-19 mortality rate to increase with county population. It would be very interesting to query the CDC's WONDER database for demogaphic county data to better model mortality rate
+</small>
+Thank You for your Attention!
+========================================================
+![COVID-19 Mortality by County for NorthEastern US](https://i.imgur.com/673CMT0.gif)
